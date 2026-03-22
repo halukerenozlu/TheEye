@@ -1,11 +1,11 @@
 # AGENTS.md — The EYE Repository Rules
 
 > Read this file **first** before making any code changes.
-> This repo is designed to be worked on by multiple coding agents (Claude Code, Gemini, ChatGPT Codex) and humans.
+> This repo is designed to be worked on by multiple coding agents (Claude Code, ChatGPT Codex) and humans.
 
 ## 0) Project Summary
 
-**World Pulse** is a real-time(ish) world monitoring dashboard:
+**TheEye** is a real-time(ish) world monitoring dashboard:
 
 - disasters (earthquakes, wildfires, storms…)
 - live flights
