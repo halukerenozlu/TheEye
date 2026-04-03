@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -10,8 +11,25 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
+type config struct {
+	Port    string
+	AppName string
+	Env     string
+	Version string
+}
+
+type statusResponse struct {
+	Status string `json:"status"`
+}
+
+type metaResponse struct {
+	Name        string `json:"name"`
+	Environment string `json:"environment"`
+	Version     string `json:"version"`
+}
+
 func main() {
-	port := getenv("PORT", "8080")
+	cfg := loadConfig()
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
@@ -21,19 +39,23 @@ func main() {
 
 	// Health endpoints
 	r.Get("/v1/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		writeJSON(w, http.StatusOK, statusResponse{Status: "healthy"})
 	})
 
-	// Placeholder ready check (later: DB + Redis ping)
+	// Placeholder ready check (later: DB + Redis ping).
 	r.Get("/v1/readyz", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte("ok"))
+		writeJSON(w, http.StatusOK, statusResponse{Status: "ready"})
 	})
 
-	addr := ":" + port
+	r.Get("/v1/meta", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, metaResponse{
+			Name:        cfg.AppName,
+			Environment: cfg.Env,
+			Version:     cfg.Version,
+		})
+	})
+
+	addr := ":" + cfg.Port
 	log.Printf("api listening on %s", addr)
 	srv := &http.Server{
 		Addr:              addr,
@@ -41,6 +63,24 @@ func main() {
 		ReadHeaderTimeout: 5 * time.Second,
 	}
 	log.Fatal(srv.ListenAndServe())
+}
+
+func loadConfig() config {
+	return config{
+		Port:    getenv("PORT", "8080"),
+		AppName: getenv("APP_NAME", "theeye-api"),
+		Env:     getenv("APP_ENV", "development"),
+		Version: getenv("APP_VERSION", "dev"),
+	}
+}
+
+func writeJSON(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+
+	if err := json.NewEncoder(w).Encode(payload); err != nil {
+		log.Printf("failed to encode response: %v", err)
+	}
 }
 
 func getenv(key, fallback string) string {

@@ -216,3 +216,85 @@ M2: USGS earthquakes connector → events appear on map
 M3: SSE stream + dashboard live updates
 M4: add EONET/GDACS + basic filtering + caching
 M5: traffic/flights with bbox-only queries and strict rate limiting
+
+## 16) Document Priority / Source of Truth Order
+
+If documents conflict, follow this priority order:
+
+1. AGENTS.md
+2. WORKFLOW.md
+3. VERSIONING.md
+4. current phase document under docs/phases/
+5. current sprint document under docs/sprints/
+6. implementation details in code
+
+Agents must not invent a new direction when the docs already define one.
+
+## 17) Step-Based Delivery Rule
+
+All implementation work must be mapped to:
+
+- Phase
+- Sprint
+- Step
+
+No coding work should begin unless the current step is explicitly defined.
+
+Agents must work only on the requested step and avoid unrelated improvements, hidden refactors, or speculative architecture changes.
+
+## 18) Role Separation
+
+### Human
+- defines product direction
+- approves or rejects final outcomes
+- decides priorities
+
+### ChatGPT
+- defines roadmap, phases, sprints, and steps
+- generates Codex implementation prompts
+- generates Claude Code review prompts
+- interprets review outputs
+- suggests commits and tags
+
+### Codex
+- acts as the implementation agent
+- performs scoped code changes only
+- must not expand scope
+
+### Claude Code
+- acts as the review agent
+- reviews Codex output for correctness, scope compliance, and minimalism
+- should not behave like a second primary implementer
+
+## 19) Review Decision Categories
+
+Review outcomes should be interpreted in one of these categories:
+
+- Accept
+- Accept with minimal patch
+- Rework needed
+- Reject
+
+Reviews should clearly separate:
+- required fixes
+- optional suggestions
+
+## 20) Version Tag Discipline
+
+The project uses milestone-based version tags.
+
+Format:
+- vMAJOR.MINOR.PATCH
+
+Rules:
+- commits are for normal progress
+- tags are only for meaningful milestones
+- do not tag every commit
+- create tags only after implementation is reviewed and approved
+
+Early roadmap example:
+- v0.1.0 -> infra and local workflow baseline
+- v0.2.0 -> product scope and domain model
+- v0.3.0 -> backend foundation
+- v0.4.0 -> first ingestion pipeline
+- v0.5.0 -> first API milestone
