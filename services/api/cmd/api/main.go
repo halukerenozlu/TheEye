@@ -32,6 +32,11 @@ type metaResponse struct {
 	Version     string `json:"version"`
 }
 
+type eventsListResponse struct {
+	Items      []any  `json:"items"`
+	NextCursor string `json:"next_cursor"`
+}
+
 func main() {
 	cfg := loadConfig()
 	if err := run(cfg); err != nil {
@@ -61,6 +66,13 @@ func run(cfg config) error {
 			Name:        cfg.AppName,
 			Environment: cfg.Env,
 			Version:     cfg.Version,
+		})
+	})
+
+	r.Get("/v1/events", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, eventsListResponse{
+			Items:      []any{},
+			NextCursor: "",
 		})
 	})
 
