@@ -47,6 +47,11 @@ type eventsListResponse struct {
 	NextCursor string  `json:"next_cursor"`
 }
 
+type errorResponse struct {
+	Error   string `json:"error"`
+	Message string `json:"message"`
+}
+
 func main() {
 	cfg := loadConfig()
 	if err := run(cfg); err != nil {
@@ -83,6 +88,13 @@ func run(cfg config) error {
 		writeJSON(w, http.StatusOK, eventsListResponse{
 			Items:      []Event{},
 			NextCursor: "",
+		})
+	})
+
+	r.Get("/v1/events/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusNotFound, errorResponse{
+			Error:   "event_not_found",
+			Message: "event not found",
 		})
 	})
 
