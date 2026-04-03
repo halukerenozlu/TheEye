@@ -32,9 +32,19 @@ type metaResponse struct {
 	Version     string `json:"version"`
 }
 
+type Event struct {
+	ID        string `json:"id"`
+	Type      string `json:"type"`
+	Title     string `json:"title"`
+	Status    string `json:"status"`
+	Severity  int    `json:"severity"`
+	StartedAt string `json:"started_at"`
+	UpdatedAt string `json:"updated_at"`
+}
+
 type eventsListResponse struct {
-	Items      []any  `json:"items"`
-	NextCursor string `json:"next_cursor"`
+	Items      []Event `json:"items"`
+	NextCursor string  `json:"next_cursor"`
 }
 
 func main() {
@@ -71,7 +81,7 @@ func run(cfg config) error {
 
 	r.Get("/v1/events", func(w http.ResponseWriter, _ *http.Request) {
 		writeJSON(w, http.StatusOK, eventsListResponse{
-			Items:      []any{},
+			Items:      []Event{},
 			NextCursor: "",
 		})
 	})
