@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend API
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: services/api
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: services/api/go.mod
+          cache-dependency-path: services/api/go.sum
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Check formatting
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "The following files are not formatted:"
+            echo "$unformatted"
+            exit 1
+          fi
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test ./...
+
+      - name: Build
+        run: go build ./...
+
+  dashboard:
+    name: Dashboard
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/dashboard
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: apps/dashboard/package-lock.json
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install dependencies
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            corepack prepare pnpm@latest --activate
+            pnpm install --frozen-lockfile
+          elif [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f yarn.lock ]; then
+            corepack prepare yarn@stable --activate
+            yarn install --frozen-lockfile
+          else
+            npm install
+          fi
+
+      - name: Lint
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm run lint --if-present
+          elif [ -f package-lock.json ]; then
+            npm run lint --if-present
+          elif [ -f yarn.lock ]; then
+            yarn run lint || true
+          else
+            npm run lint --if-present
+          fi
+
+      - name: Typecheck
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm run typecheck --if-present
+          elif [ -f package-lock.json ]; then
+            npm run typecheck --if-present
+          elif [ -f yarn.lock ]; then
+            yarn run typecheck || true
+          else
+            npm run typecheck --if-present
+          fi
+
+      - name: Test
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm run test --if-present
+          elif [ -f package-lock.json ]; then
+            npm run test --if-present
+          elif [ -f yarn.lock ]; then
+            yarn run test || true
+          else
+            npm run test --if-present
+          fi
+
+      - name: Build
+        shell: bash
+        run: |
+          if [ -f pnpm-lock.yaml ]; then
+            pnpm run build
+          elif [ -f package-lock.json ]; then
+            npm run build
+          elif [ -f yarn.lock ]; then
+            yarn run build
+          else
+            npm run build
+          fi
