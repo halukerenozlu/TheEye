@@ -12,7 +12,7 @@ Phase 2 — Backend Foundation
 
 Current remaining work:
 
-- **Step 6 — Response and error shape cleanup**
+- none in Sprint 1 (Steps 1-6 completed)
 
 ---
 
@@ -112,15 +112,21 @@ Delivered:
 
 ### Step 6 — Response and error shape cleanup
 
-Status: Active next
+Status: Completed
 
-Planned focus:
+Delivered:
 
-- standardize small JSON response helpers if useful
-- keep changes minimal
-- avoid premature abstraction
-- prepare for future API consistency
-- create a cleaner handoff point for later frontend integration
+- standardized minimal JSON error writing through a small reusable helper
+- kept `GET /v1/events` response shape stable:
+  - `{ "items": [], "next_cursor": "" }`
+- kept `GET /v1/events/{id}` placeholder behavior and aligned it to the consistent error shape
+- added router-level consistent JSON errors for `404` and `405`
+- added minimal backend tests for Step 6 behavior:
+  - JSON error helper behavior
+  - `GET /v1/events/{id}` placeholder error shape consistency
+  - router-level `404` and `405` JSON error shape
+  - `GET /v1/events` shape stability
+- no scope expansion beyond Step 6
 
 ---
 
@@ -155,3 +161,4 @@ Sprint 1 is complete when:
 This sprint is intentionally foundation-heavy.
 The aim is not feature richness.
 The aim is to create a backend shell that later ingestion work and frontend integration can attach to safely.
+

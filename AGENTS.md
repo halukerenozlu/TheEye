@@ -295,7 +295,23 @@ Claude Code is **not** the primary implementer in this project.
 
 ---
 
-## 13) Backend-First Integration Protocol
+## 13) Implementation and Testing Responsibility
+
+Whoever implements a scoped change is also responsible for the minimum necessary tests for that change.
+
+Rules:
+
+- If Codex implements backend changes, Codex should also add or update the relevant backend tests and run them.
+- If Gemini implements frontend changes, Gemini should also add or update the relevant frontend tests and run them when practical.
+- The implementation agent should keep tests minimal, relevant, and scoped to the current step.
+- Claude Code acts as a reviewer of implementation and test adequacy, not as the primary test author.
+- Human performs final smoke testing, approval, commit, and tag decisions.
+
+This rule exists to keep implementation ownership and test ownership aligned, reduce responsibility gaps, and prevent review agents from becoming primary implementers.
+
+---
+
+## 14) Backend-First Integration Protocol
 
 When work touches the frontend/backend boundary, follow this order:
 
@@ -312,7 +328,7 @@ This is the default integration path for TheEye.
 
 ---
 
-## 14) Step-Based Delivery Rule
+## 15) Step-Based Delivery Rule
 
 All implementation work must map to:
 
@@ -338,7 +354,7 @@ Not allowed:
 
 ---
 
-## 15) Review Decision Categories
+## 16) Review Decision Categories
 
 Review results should be interpreted as one of:
 
@@ -351,7 +367,7 @@ Required fixes and optional suggestions should be separated clearly.
 
 ---
 
-## 16) Documentation Sync Rule
+## 17) Documentation Sync Rule
 
 Documentation should not drift from accepted implementation.
 
@@ -366,7 +382,7 @@ Do not leave backend, Docker, contract, or sprint status changes undocumented.
 
 ---
 
-## 17) Version Tag Discipline
+## 18) Version Tag Discipline
 
 Use milestone-based tags in the format:
 
@@ -382,7 +398,7 @@ Rules:
 
 ---
 
-## 18) Source of Truth Order
+## 19) Source of Truth Order
 
 If documents conflict, follow this order:
 

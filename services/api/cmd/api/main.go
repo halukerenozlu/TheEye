@@ -60,43 +60,7 @@ func main() {
 }
 
 func run(cfg config) error {
-	r := chi.NewRouter()
-	r.Use(middleware.RequestID)
-	r.Use(middleware.RealIP)
-	r.Use(middleware.Recoverer)
-	r.Use(middleware.Timeout(10 * time.Second))
-
-	// Health endpoints
-	r.Get("/v1/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, statusResponse{Status: "healthy"})
-	})
-
-	// Placeholder ready check (later: DB + Redis ping).
-	r.Get("/v1/readyz", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, statusResponse{Status: "ready"})
-	})
-
-	r.Get("/v1/meta", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, metaResponse{
-			Name:        cfg.AppName,
-			Environment: cfg.Env,
-			Version:     cfg.Version,
-		})
-	})
-
-	r.Get("/v1/events", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, eventsListResponse{
-			Items:      []Event{},
-			NextCursor: "",
-		})
-	})
-
-	r.Get("/v1/events/{id}", func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusNotFound, errorResponse{
-			Error:   "event_not_found",
-			Message: "event not found",
-		})
-	})
+	r := newRouter(cfg)
 
 	addr := ":" + cfg.Port
 	srv := &http.Server{
@@ -143,6 +107,51 @@ func run(cfg config) error {
 	return nil
 }
 
+func newRouter(cfg config) chi.Router {
+	r := chi.NewRouter()
+	r.Use(middleware.RequestID)
+	r.Use(middleware.RealIP)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.Timeout(10 * time.Second))
+	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusNotFound, "route_not_found", "route not found")
+	})
+	r.MethodNotAllowed(func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusMethodNotAllowed, "method_not_allowed", "method not allowed")
+	})
+
+	// Health endpoints
+	r.Get("/v1/healthz", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, statusResponse{Status: "healthy"})
+	})
+
+	// Placeholder ready check (later: DB + Redis ping).
+	r.Get("/v1/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, statusResponse{Status: "ready"})
+	})
+
+	r.Get("/v1/meta", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, metaResponse{
+			Name:        cfg.AppName,
+			Environment: cfg.Env,
+			Version:     cfg.Version,
+		})
+	})
+
+	r.Get("/v1/events", func(w http.ResponseWriter, _ *http.Request) {
+		writeJSON(w, http.StatusOK, eventsListResponse{
+			Items:      []Event{},
+			NextCursor: "",
+		})
+	})
+
+	r.Get("/v1/events/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		writeError(w, http.StatusNotFound, "event_not_found", "event not found")
+	})
+
+	return r
+}
+
 func loadConfig() config {
 	return config{
 		Port:    getenv("PORT", "8080"),
@@ -159,6 +168,13 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 	if err := json.NewEncoder(w).Encode(payload); err != nil {
 		log.Printf("failed to encode response: %v", err)
 	}
+}
+
+func writeError(w http.ResponseWriter, status int, code, message string) {
+	writeJSON(w, status, errorResponse{
+		Error:   code,
+		Message: message,
+	})
 }
 
 func getenv(key, fallback string) string {

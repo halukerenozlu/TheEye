@@ -12,7 +12,7 @@ Current active sprint:
 
 Current active step:
 
-- **Step 6 — Response and error shape cleanup**
+- Step 6 completed in Sprint 1; next Phase 2 step is not yet selected
 
 ---
 
@@ -102,19 +102,19 @@ Example:
 }
 ```
 
-#### Active step
+#### Step 6 completion
 
 ##### Step 6 — Response and error shape cleanup
 
-Status: Planned / Active next
+Status: Completed
 
-Planned focus:
+Delivered:
 
-- standardize small JSON response helpers if useful
-- keep changes minimal
-- avoid premature abstraction
-- improve API consistency before moving deeper
-- prepare the contract for later frontend integration
+- standardized minimal JSON error writing through a small reusable helper
+- kept list/detail placeholder behavior stable and made error responses more consistent
+- added router-level consistent JSON errors for `404` and `405`
+- added minimal backend tests covering Step 6 response/error behavior
+- no scope expansion beyond Step 6
 
 ---
 
@@ -181,3 +181,4 @@ After finishing the remaining cleanup in this phase, the next phase should move 
 - source normalization
 - storage-backed event flow
 - first real data appearing through `/v1/events`
+

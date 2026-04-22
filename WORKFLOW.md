@@ -64,6 +64,8 @@ Responsible for:
 - scoped code changes
 - final documentation sync after accepted work
 
+Codex must not silently expand scope.
+
 ### Gemini
 
 Frontend and integration-focused agent.
@@ -74,6 +76,8 @@ Responsible for:
 - frontend implementation
 - reviewing the latest backend contract from a frontend perspective
 - identifying integration mismatch before frontend coding begins
+
+Gemini must not invent backend fields, response shapes, or new product scope.
 
 ### Claude Code
 
@@ -86,6 +90,24 @@ Responsible for:
 - scope validation
 - contract drift detection
 - regression and complexity detection
+
+Claude Code is not the primary implementer in this project.
+
+---
+
+## Implementation and Testing Responsibility
+
+The primary implementation agent is also responsible for the minimum necessary tests for the scoped change.
+
+Rules:
+
+- If Codex implements backend changes, Codex should also add or update the relevant backend tests and run them.
+- If Gemini implements frontend changes, Gemini should also add or update the relevant frontend tests and run them when practical.
+- The implementation agent should keep tests minimal, relevant, and scoped to the current step.
+- Claude Code acts as a reviewer of implementation and test adequacy, not as the primary test author.
+- Human performs final smoke testing, approval, commit, and tag decisions.
+
+This rule exists to keep implementation ownership and test ownership aligned, reduce responsibility gaps, and prevent review agents from becoming primary implementers.
 
 ---
 
@@ -120,12 +142,19 @@ ChatGPT prepares a focused Codex implementation prompt containing:
 - constraints
 - out-of-scope items
 - expected deliverable
+- testing expectations
 
 ### Step 4 — Implement backend or contract-changing work with Codex
 
 Codex performs the implementation needed for the current step.
 
 This is the default first implementation pass when the backend/frontend boundary may be affected.
+
+Codex must also:
+
+- add or update the minimum necessary backend tests for the scoped change
+- run the relevant local verification steps
+- report exactly what was tested
 
 ### Step 5 — Gemini integration review before frontend coding
 
@@ -145,6 +174,8 @@ If Gemini finds a legitimate integration issue:
 - Codex applies the smallest necessary backend patch
 - backend behavior is stabilized before frontend coding
 
+Any backend patch in this step should also include the minimum necessary test update and rerun of relevant verification steps.
+
 ### Step 7 — Implement frontend with Gemini
 
 Once the backend contract is stable:
@@ -152,6 +183,8 @@ Once the backend contract is stable:
 - Gemini implements the frontend slice
 - frontend should follow the documented API shape
 - loading, empty, and error states should be handled explicitly
+- Gemini should add or update the minimum necessary frontend tests when practical
+- Gemini should run the relevant local verification steps and report what was checked
 
 ### Step 8 — Selective Claude review
 
@@ -163,6 +196,14 @@ Claude Code reviews the integrated result when the change is:
 - close to a tag-worthy checkpoint
 
 Claude is not required for every trivial change, but should be used when the risk justifies it.
+
+Claude reviews:
+
+- scope correctness
+- contract drift
+- regression risk
+- unnecessary complexity
+- test adequacy
 
 ### Step 9 — Final documentation sync with Codex
 
@@ -178,7 +219,13 @@ After approval, commit the finished unit.
 
 ### Step 11 — Tag
 
-Create a version tag only when a meaningful milestone or completed phase justifies it.
+Create a version tag only when a meaningful milestone justifies it.
+
+For TheEye:
+
+- do not start milestone tagging before Phase 2 is complete
+- normal sprint progress alone usually does not justify a tag
+- docs should be synced before tagging
 
 ---
 
@@ -189,6 +236,7 @@ Create a version tag only when a meaningful milestone or completed phase justifi
 - work only on the current step
 - make small supporting changes required by the step
 - update docs when accepted work changes project understanding or project state
+- add minimal tests directly tied to the scoped change
 
 ### Not Allowed
 
@@ -242,13 +290,17 @@ Avoid mixing unrelated concerns unless it is a deliberate bootstrap change.
 
 Tags are for milestones, not routine progress.
 
+For TheEye, milestone tagging begins only after Phase 2 is complete.
+
 Strong candidates for tags include:
 
-- completed foundation milestone
 - completed backend-foundation milestone
 - first ingestion milestone
 - first useful dashboard milestone
-- completed phase
+- completed later-phase milestone
+- meaningful stabilization milestone
+
+Do not tag normal sprint progress just because work was completed.
 
 ---
 
