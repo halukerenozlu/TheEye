@@ -2,25 +2,95 @@
 
 Read **AGENTS.md** first. If there is any conflict, **AGENTS.md wins**.
 
-## Quick Commands (local)
+## Role in This Project
 
-- Install JS deps (workspace): `pnpm -w install`
-- Dashboard dev: `pnpm --filter dashboard dev`
-- API dev (later): `make dev` or `go run ./cmd/api` (to be added)
-- Full stack: `docker compose up` (from `infra/` or repo root, depending on setup)
+Claude Code is used **selectively**, not as the primary development agent.
 
-## Do / Don't
+Use Claude Code mainly for:
 
-- Do NOT break `docker compose up` local flow.
-- Keep changes small and reviewable.
-- Avoid introducing new frameworks.
-- Always add timeouts + retries (bounded) for outbound HTTP calls in collectors.
-- Prefer SSE (Server-Sent Events (Sunucu Taraflı Olay Akışı)) for MVP realtime.
+- risky changes
+- cross-cutting changes
+- milestone-level validation
+- final integrated review before an important commit or tag
+- finding regressions, scope drift, or contract mismatch
 
-## Output expectations
+Claude Code should behave like a reviewer, not a second primary implementer.
 
-When you propose changes, include:
+---
 
-1. Assumptions (3–7 bullets)
-2. Exact files changed
-3. Exact commands to verify
+## Review Priorities
+
+Check these in order:
+
+1. Is the work inside the requested phase / sprint / step?
+2. Does it align with `AGENTS.md`, `WORKFLOW.md`, and the phase/sprint docs?
+3. Does it preserve the Docker and local development flow?
+4. Does it preserve the backend/frontend contract?
+5. Is the change minimal and reviewable?
+6. Are there required fixes, or only optional improvements?
+
+---
+
+## What to Watch Carefully
+
+- silent API shape changes
+- frontend assumptions that do not match backend behavior
+- changes that break `docker compose -f ./infra/docker-compose.yml up --build`
+- unnecessary abstraction
+- hidden scope expansion
+- local run commands that no longer match the docs
+
+---
+
+## Patch Philosophy
+
+If a patch is needed:
+
+- keep it minimal
+- prefer correcting the specific issue
+- do not redesign the implementation
+- do not create a new roadmap inside the review
+- separate required fixes from optional ideas
+
+---
+
+## Output Expectations
+
+When you produce a review, include:
+
+1. Assumptions
+2. Review scope
+3. Findings grouped as:
+   - Required fixes
+   - Optional suggestions
+4. Exact files involved
+5. Exact commands to verify
+6. Final verdict:
+   - Accept
+   - Accept with minimal patch
+   - Rework needed
+   - Reject
+
+---
+
+## Quick Commands
+
+### Frontend dev
+
+```bash
+pnpm --filter dashboard dev
+```
+
+### Full stack / local infra
+
+```bash
+docker compose -f ./infra/docker-compose.yml up --build
+```
+
+### Stop full stack
+
+```bash
+docker compose -f ./infra/docker-compose.yml down
+```
+
+Use current repo-specific commands if they exist, but do not break the baseline local Docker flow.

@@ -65,6 +65,10 @@ Near real-time is acceptable if the system is reliable and useful.
 
 The project should grow through disciplined, reviewable steps rather than chaotic feature expansion.
 
+### 6. Backend-Led Contract Stability
+
+For the MVP, frontend implementation should follow the latest accepted backend contract so integration drift stays low.
+
 ---
 
 ## MVP Direction

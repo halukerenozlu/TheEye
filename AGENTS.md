@@ -1,300 +1,396 @@
-# AGENTS.md — The EYE Repository Rules
+# AGENTS.md — TheEye Repository Rules
 
 > Read this file **first** before making any code changes.
-> This repo is designed to be worked on by multiple coding agents (Claude Code, ChatGPT Codex) and humans.
+> This repository is designed for controlled work across humans, Codex, Gemini, Claude Code, and ChatGPT.
 
 ## 0) Project Summary
 
-**TheEye** is a real-time(ish) world monitoring dashboard:
+**TheEye** is a near real-time, map-first world monitoring platform.
 
-- disasters (earthquakes, wildfires, storms…)
-- live flights
-- traffic (incidents/flow)
-- optional context (reports/news)
+Primary signal categories include:
 
-Core UX: a single map view with layers + a live feed panel + time filters.
+- earthquakes
+- wildfires
+- storms
+- flights
+- traffic incidents
+
+Core UX:
+
+- a primary map view
+- event layers
+- a live feed panel
+- time and type filters
+- one normalized event model across sources
+
+---
 
 ## 1) Product Goals (Must-Haves)
 
-- **Fast initial signal**: map shows meaningful events within seconds.
-- **Map-first**: viewport/bbox querying is the primary access pattern.
-- **Normalized data model**: different sources → one `Event` schema.
-- **Near real-time** is acceptable for MVP (30–120s latency).
-- **Operational safety**: rate limiting, caching, reliable ingestion, observability hooks.
+- **Fast initial signal**: meaningful events should appear quickly.
+- **Map-first**: geographic exploration is primary.
+- **Normalized event model**: different sources converge into one `Event` schema.
+- **Near real-time is enough for MVP**: reliability matters more than theoretical perfection.
+- **Operational safety**: caching, rate limiting, retries, and observability-ready behavior.
+- **Stable local development**: Docker-based startup must remain dependable.
+
+---
 
 ## 2) Non-Goals (Avoid)
 
-- Big-bang rewrite or framework churn.
-- Premature microservices split beyond: `api` + `collector` (+ dashboard).
-- Heavy deployment refactors early. Keep local dev flow stable.
-- Scraping sites without explicit permission. Prefer official APIs/feeds.
+- big-bang rewrites
+- premature microservices fragmentation
+- heavy deployment refactors early
+- unofficial or unsafe scraping
+- scope creep hidden behind "helpful" improvements
+- frontend work that invents backend contracts
+
+---
 
 ## 3) Tech Stack (Locked for MVP)
 
 ### Frontend
 
 - Next.js (TypeScript)
-- TailwindCSS + shadcn/ui
-- MapLibre GL JS (WebGL map rendering)
-- TanStack Query (data fetching/cache)
-- Zustand (UI state: active layers, filters)
+- Tailwind CSS
+- shadcn/ui
+- MapLibre GL JS
+- TanStack Query
+- Zustand
 
-### Backend (API + Aggregation)
+### Backend
 
-- Go (HTTP API)
-- chi (router) or gin (router) — keep it minimal
-- SSE (Server-Sent Events) for realtime MVP (WebSocket later if needed)
-- PostgreSQL + PostGIS (geo queries)
-- Redis (cache + rate limiting + stream fan-out)
+- Go
+- minimal HTTP router
+- SSE (Server-Sent Events) for MVP realtime
+- PostgreSQL + PostGIS
+- Redis
 
-### Dev/Infra
+### Dev / Infra
 
-- Docker + Docker Compose (local parity)
-- GitHub Actions (CI: lint/test/build)
+- Docker + Docker Compose
+- GitHub Actions for CI later
+
+---
 
 ## 4) Repository Layout (Target)
 
-- apps/
-  - dashboard/ # Next.js app
-- services/
-  - api/ # Go API (REST + SSE)
-  - collector/ # Go ingestion workers/connectors
-- infra/
-  - docker-compose.yml
-- shared/
-  - schema/ # Event model + OpenAPI (or generated types)
+```text
+apps/
+  dashboard/      # Frontend app
 
-Agents should NOT invent a different layout unless explicitly required.
+services/
+  api/            # Go API service
+  collector/      # Go ingestion workers/connectors
 
-## 5) Source-of-Truth Data Model: Event
+shared/
+  schema/         # Shared event contracts and generated types
 
-All sources MUST normalize into the same `Event` structure.
+infra/
+  docker-compose.yml
+```
 
-Required fields:
+Agents must not invent a fundamentally different layout without explicit approval.
 
-- id (ULID/UUID)
-- type (earthquake, wildfire, storm, flight, traffic_incident, …)
-- title
-- status (active|resolved|cancelled|unknown)
-- severity (0..100)
-- started_at, updated_at (ISO-8601)
-- geometry (GeoJSON)
-- source: { name, event_id, url, fetched_at }
+---
 
-Recommended fields:
+## 5) Source-of-Truth Data Model: `Event`
 
-- confidence (0..1)
-- ended_at
-- location (country_code/admin/place)
-- tags (string[])
-- metrics (type-specific numbers)
-- raw (JSONB) (optional but useful for audits/debug)
+All sources must normalize into the same `Event` structure.
 
-DB uniqueness MUST be enforced by:
+### Required fields
 
-- UNIQUE (source_name, source_event_id)
-  so collectors can UPSERT idempotently.
+- `id`
+- `type`
+- `title`
+- `status`
+- `severity`
+- `started_at`
+- `updated_at`
+- `geometry`
+- `source`
+
+### Recommended fields
+
+- `confidence`
+- `ended_at`
+- `location`
+- `tags`
+- `metrics`
+- `raw`
+
+Database uniqueness should enforce idempotent source ingestion using:
+
+- `UNIQUE (source_name, source_event_id)`
+
+---
 
 ## 6) API Contract (MVP)
 
 ### Health
 
-- GET /v1/healthz
-- GET /v1/readyz
-- GET /v1/meta
+- `GET /v1/healthz`
+- `GET /v1/readyz`
+- `GET /v1/meta`
 
 ### Events
 
-- GET /v1/events?bbox=...&since=...&types=...&severity_gte=...&status=...&limit=...&cursor=...
-- GET /v1/events/{id}
-- GET /v1/events/changes?since=...
+- `GET /v1/events`
+- `GET /v1/events/{id}`
+- `GET /v1/events/changes`
 
 ### Realtime
 
-- GET /v1/stream/events (SSE), supports filters similar to /events
+- `GET /v1/stream/events` via SSE
 
-Agents must keep endpoints stable once introduced.
-If you need a breaking change, add v2 endpoints rather than breaking v1.
+Once introduced, endpoints should remain stable.
+Breaking changes should prefer new versioned routes rather than silent mutation.
+
+---
 
 ## 7) Local Development Rules (Do Not Break)
 
-- `docker compose up` MUST start:
-  - postgres (with PostGIS)
-  - redis
-  - api
-  - (optional) collector
-- Dashboard must run with a single command (`npm run dev` or `pnpm dev`)
-- Avoid requiring paid keys for the base demo. Use public feeds where possible.
+The baseline local flow must continue to work with:
 
-## 8) Coding Standards
+```bash
+docker compose -f ./infra/docker-compose.yml up --build
+```
+
+This flow should remain compatible with the services required for the MVP, including:
+
+- PostgreSQL / PostGIS
+- Redis
+- API
+- optional collector
+
+Frontend should remain runnable with a single command such as:
+
+```bash
+pnpm --filter dashboard dev
+```
+
+Do not break Docker startup, service wiring, or the local-first workflow.
+
+---
+
+## 8) Engineering Standards
 
 ### Go
 
-- Keep packages small and cohesive.
-- Prefer explicit error handling; no panics in request paths.
-- Use context.Context for IO and request lifecycles.
-- Structured logging (JSON) preferred.
-- Add timeouts on outbound HTTP calls.
-- Implement retries with backoff for ingestion connectors (bounded).
+- explicit error handling
+- no panics in request paths
+- context-aware IO
+- structured logging preferred
+- timeouts on outbound HTTP calls
+- bounded retries with backoff in collectors
 
 ### TypeScript / Frontend
 
-- Strict TypeScript. No `any` without justification.
-- Keep map rendering performant:
-  - clustering for points
-  - avoid re-render loops
-  - query only on viewport change (debounce)
+- strict TypeScript
+- avoid `any` unless justified
+- keep map rendering performant
+- debounce viewport-driven queries
+- handle loading, empty, and error states explicitly
 
 ### Dependencies
 
-- Add new deps only if they materially reduce complexity.
-- Avoid “framework hopping”.
+- add new dependencies only when they clearly reduce complexity
+- avoid framework churn
 
-## 9) Performance & Reliability (Minimum Bar)
+---
 
-- bbox queries must use PostGIS + GIST indexes.
-- cache hot paths in Redis (short TTL is fine).
-- rate limit outbound source calls and inbound API calls.
-- collectors must be safe under restarts (idempotent upsert).
-- avoid fetching “worldwide flights” indiscriminately; always filter by bbox.
+## 9) Performance and Reliability Baseline
 
-## 10) Security & Secrets
+- use PostGIS indexes for geographic queries
+- cache hot paths in Redis where appropriate
+- rate limit inbound and outbound traffic where needed
+- keep collector writes idempotent
+- avoid unbounded world-scale queries when bbox filtering exists
 
-- Never commit API keys.
-- Use `.env` locally; provide `.env.example`.
-- Validate and sanitize query params (bbox, since, types, limits).
+---
 
-## 11) Testing & CI Expectations
+## 10) Security and Secrets
 
-- Go: unit tests for connectors normalization + API handlers.
-- Frontend: basic component test optional; critical flows E2E later.
-- CI (GitHub Actions) should run:
-  - Go fmt + go test
-  - TS typecheck + lint
-  - build (best-effort)
+- never commit secrets
+- keep `.env.example` current
+- validate all query parameters
+- keep local and shared config explicit
 
-## 12) Git Workflow
+---
 
-- Branches: `main` (protected), feature branches per unit of work.
-- Commits: Conventional Commits recommended:
-  - feat:, fix:, chore:, refactor:, docs:
-- PRs must include:
-  - what changed
-  - how to test locally
-  - screenshots/gifs for UI changes when relevant
+## 11) Testing and Verification Expectations
 
-## 13) Multi-Agent Coordination Protocol
-
-When an agent works on a task, it must:
-
-1. State assumptions and scope in 3–7 bullets.
-2. Make small, reviewable changes (prefer incremental PRs).
-3. Update docs/config if behavior changes.
-4. Avoid silent breaking changes.
-5. Output exact commands to run for verification.
-
-If multiple agents are used concurrently:
-
-- designate ONE “integrator” (human or agent) to merge changes.
-- avoid overlapping edits in the same files.
-- define interfaces first (Event schema + OpenAPI), then implement.
-
-## 14) Definition of Done (DoD)
-
-A task is done when:
+Minimum expectation for meaningful changes:
 
 - code compiles
-- relevant tests pass
-- local run steps are documented
-- no breaking changes to local dev flow
-- endpoints and Event schema remain consistent
+- local run steps are clear
+- impacted routes or UI flows are verified
+- Docker flow remains healthy
+- frontend/backend contract is checked if the boundary changed
 
-## 15) MVP Milestones (Suggested)
+---
 
-M1: docker-compose + DB schema + /healthz + /events (empty OK)
-M2: USGS earthquakes connector → events appear on map
-M3: SSE stream + dashboard live updates
-M4: add EONET/GDACS + basic filtering + caching
-M5: traffic/flights with bbox-only queries and strict rate limiting
+## 12) Multi-Agent Role Separation
 
-## 16) Document Priority / Source of Truth Order
+### Human
 
-If documents conflict, follow this priority order:
+Responsible for:
 
-1. AGENTS.md
-2. WORKFLOW.md
-3. VERSIONING.md
-4. current phase document under docs/phases/
-5. current sprint document under docs/sprints/
-6. implementation details in code
+- product direction
+- priorities
+- approval or rejection
+- final tradeoff decisions
 
-Agents must not invent a new direction when the docs already define one.
+### ChatGPT
 
-## 17) Step-Based Delivery Rule
+Responsible for:
 
-All implementation work must be mapped to:
+- architecture framing
+- roadmap / phase / sprint / step definition
+- Codex prompt generation
+- Gemini prompt generation
+- Claude Code review prompt generation
+- review interpretation
+- commit and tag suggestions
+- documentation alignment guidance
+
+### Codex
+
+Primary implementation agent.
+
+Responsible for:
+
+- backend implementation by default
+- repo-wide implementation work
+- focused code changes
+- document sync at the end of accepted work
+- keeping scope tight
+
+Codex must not silently expand the sprint.
+
+### Gemini
+
+Primarily responsible for:
+
+- frontend direction when design is still undefined
+- frontend implementation
+- backend-aware integration checks before frontend coding
+- UI structure, component flow, and UX shaping within scope
+
+Gemini must not invent backend fields, response shapes, or new product scope.
+
+### Claude Code
+
+Selective review agent.
+
+Responsible for:
+
+- final review on risky, milestone, or cross-cutting work
+- checking scope correctness
+- checking contract drift
+- identifying regressions and unnecessary complexity
+- suggesting minimal fixes only when necessary
+
+Claude Code is **not** the primary implementer in this project.
+
+---
+
+## 13) Backend-First Integration Protocol
+
+When work touches the frontend/backend boundary, follow this order:
+
+1. ChatGPT defines the exact step and boundaries.
+2. Codex implements the backend or contract-changing work first.
+3. Gemini reads the latest backend diff, docs, and contract.
+4. Gemini reports integration risks or frontend impact before frontend coding begins.
+5. Codex applies any required backend patch.
+6. Gemini implements the frontend against the finalized backend behavior.
+7. Claude Code reviews the integrated result only when the change is risky, milestone-level, or cross-cutting.
+8. Codex syncs the docs last.
+
+This is the default integration path for TheEye.
+
+---
+
+## 14) Step-Based Delivery Rule
+
+All implementation work must map to:
 
 - Phase
 - Sprint
 - Step
 
-No coding work should begin unless the current step is explicitly defined.
+No coding work should begin unless the current step is explicit.
 
-Agents must work only on the requested step and avoid unrelated improvements, hidden refactors, or speculative architecture changes.
+Allowed:
 
-## 18) Role Separation
+- work only on the active step
+- minimal supporting changes required by that step
+- doc updates needed to reflect accepted behavior
 
-### Human
-- defines product direction
-- approves or rejects final outcomes
-- decides priorities
+Not allowed:
 
-### ChatGPT
-- defines roadmap, phases, sprints, and steps
-- generates Codex implementation prompts
-- generates Claude Code review prompts
-- interprets review outputs
-- suggests commits and tags
+- unrelated refactors
+- speculative optimization
+- hidden feature expansion
+- changing contracts casually
+- parallel redesign of product direction
 
-### Codex
-- acts as the implementation agent
-- performs scoped code changes only
-- must not expand scope
+---
 
-### Claude Code
-- acts as the review agent
-- reviews Codex output for correctness, scope compliance, and minimalism
-- should not behave like a second primary implementer
+## 15) Review Decision Categories
 
-## 19) Review Decision Categories
-
-Review outcomes should be interpreted in one of these categories:
+Review results should be interpreted as one of:
 
 - Accept
 - Accept with minimal patch
 - Rework needed
 - Reject
 
-Reviews should clearly separate:
-- required fixes
-- optional suggestions
+Required fixes and optional suggestions should be separated clearly.
 
-## 20) Version Tag Discipline
+---
 
-The project uses milestone-based version tags.
+## 16) Documentation Sync Rule
 
-Format:
-- vMAJOR.MINOR.PATCH
+Documentation should not drift from accepted implementation.
+
+Preferred rule:
+
+- planning docs are clarified before work
+- code changes are implemented
+- review is completed
+- **Codex updates the final documents last** to reflect the accepted state
+
+Do not leave backend, Docker, contract, or sprint status changes undocumented.
+
+---
+
+## 17) Version Tag Discipline
+
+Use milestone-based tags in the format:
+
+- `vMAJOR.MINOR.PATCH`
 
 Rules:
-- commits are for normal progress
-- tags are only for meaningful milestones
-- do not tag every commit
-- create tags only after implementation is reviewed and approved
 
-Early roadmap example:
-- v0.1.0 -> infra and local workflow baseline
-- v0.2.0 -> product scope and domain model
-- v0.3.0 -> backend foundation
-- v0.4.0 -> first ingestion pipeline
-- v0.5.0 -> first API milestone
+- commits are for normal progress
+- tags are for meaningful milestones
+- sprint progress alone usually does not justify a tag
+- phase completion is a strong candidate for a tag
+- docs should be synced before tagging
+
+---
+
+## 18) Source of Truth Order
+
+If documents conflict, follow this order:
+
+1. `AGENTS.md`
+2. `WORKFLOW.md`
+3. `VERSIONING.md`
+4. current phase document
+5. current sprint document
+6. code details
+
+The repository documentation wins over ad-hoc tool output.

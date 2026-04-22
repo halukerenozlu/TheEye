@@ -2,6 +2,14 @@
 
 # Phase 1 — Product Definition and Domain Model
 
+## Status
+
+**Completed in substance**
+
+This phase can be treated as closed unless new product-direction decisions require reopening it.
+
+---
+
 ## Purpose
 
 This phase defines what TheEye is, what it is not, and what the MVP must support before deeper backend and data integration work.
@@ -35,7 +43,7 @@ By the end of Phase 1, the project should have:
 
 ## Working Product Definition
 
-TheEye is a near real-time monitoring dashboard that aggregates multiple world-signal sources into a unified event-centric system.
+TheEye is a near real-time monitoring platform that aggregates multiple world-signal sources into a unified event-centric system.
 
 Early examples include:
 
@@ -44,7 +52,7 @@ Early examples include:
 - storms
 - flights
 - traffic incidents
-- optional contextual reports/news later
+- optional contextual reports or news later
 
 The primary UX is:
 
@@ -73,7 +81,7 @@ The primary UX is:
 - premature microservices fragmentation
 - heavy deployment refactors
 - scraping unofficial or unsafe sources
-- overdesigned domain abstractions before first working slice
+- overdesigned domain abstractions before the first working slice
 
 ---
 
@@ -81,27 +89,37 @@ The primary UX is:
 
 All sources should normalize into a common `Event` model.
 
-Early response/model fields discussed so far:
+Early core fields:
 
-- id
-- type
-- title
-- status
-- severity
-- started_at
-- updated_at
-
-This is a minimal draft, not the final schema.
+- `id`
+- `type`
+- `title`
+- `status`
+- `severity`
+- `started_at`
+- `updated_at`
 
 Expected future additions:
 
-- geometry
-- source metadata
-- location
-- tags
-- confidence
-- metrics
-- raw payload for debugging/auditing
+- `geometry`
+- `source`
+- `location`
+- `tags`
+- `confidence`
+- `metrics`
+- `raw`
+
+---
+
+## Delivered Phase Outputs
+
+This phase is reflected through the current documentation baseline, especially:
+
+- `VISION.md`
+- `ROADMAP.md`
+- `AGENTS.md`
+- phase and sprint planning documents
+- event-driven product framing
 
 ---
 
@@ -115,9 +133,11 @@ Phase 1 is considered complete when:
 - roadmap phases are defined
 - implementation can proceed without product ambiguity
 
+These conditions are satisfied in the current documentation set.
+
 ---
 
 ## Notes
 
-Phase 1 is primarily documentation and alignment work.
+Phase 1 is documentation and alignment work.
 Its value is strategic clarity, not feature count.

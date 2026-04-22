@@ -1,11 +1,27 @@
+# PHASE_02.md
+
 # Phase 2 — Backend Foundation
+
+## Status
+
+**Active**
+
+Current active sprint:
+
+- **Sprint 1 — Backend Service Skeleton**
+
+Current active step:
+
+- **Step 6 — Response and error shape cleanup**
+
+---
 
 ## Purpose
 
 This phase establishes the first working backend foundation for TheEye.
 
 The goal is not real ingestion yet.
-The goal is a stable API skeleton that reflects the product direction and can support future data work.
+The goal is a stable API skeleton that reflects the product direction, preserves the Docker-based local workflow, and prepares the project for later integration and data work.
 
 ---
 
@@ -19,9 +35,8 @@ By the end of Phase 2, the project should have:
 - graceful shutdown
 - first events list placeholder
 - first event detail placeholder
-- an initial typed Event response draft
-
-This phase is about building the backend shell correctly.
+- an initial typed `Event` response draft
+- a stable local backend foundation that later ingestion work can build on safely
 
 ---
 
@@ -29,11 +44,9 @@ This phase is about building the backend shell correctly.
 
 ### Sprint 1 — Service Skeleton
 
-Progress so far:
+#### Completed steps
 
-#### Step 1 — Minimal API skeleton
-
-Status: Completed
+##### Step 1 — Minimal API skeleton
 
 Delivered:
 
@@ -41,9 +54,7 @@ Delivered:
 - `GET /v1/readyz`
 - `GET /v1/meta`
 
-#### Step 2 — Structured config + graceful shutdown
-
-Status: Completed
+##### Step 2 — Structured config + graceful shutdown
 
 Delivered:
 
@@ -54,18 +65,15 @@ Delivered:
 - `http.Server`
 - graceful shutdown
 
-#### Step 3 — `GET /v1/events` placeholder
-
-Status: Completed
+##### Step 3 — `GET /v1/events` placeholder
 
 Delivered:
 
-- returns:
+- placeholder list route
+- response foundation:
   - `{ "items": [], "next_cursor": "" }`
 
-#### Step 4 — Minimal typed Event response model draft
-
-Status: Completed
+##### Step 4 — Minimal typed Event response model draft
 
 Delivered:
 
@@ -78,13 +86,11 @@ Delivered:
   - `started_at`
   - `updated_at`
 
-#### Step 5 — `GET /v1/events/{id}` placeholder
-
-Status: Completed
+##### Step 5 — `GET /v1/events/{id}` placeholder
 
 Delivered:
 
-- route exists
+- detail route exists
 - currently returns JSON `404` placeholder
 
 Example:
@@ -96,16 +102,31 @@ Example:
 }
 ```
 
-#### Step 6 — Response and error shape cleanup
+#### Active step
 
-Status: Planned
+##### Step 6 — Response and error shape cleanup
+
+Status: Planned / Active next
 
 Planned focus:
 
 - standardize small JSON response helpers if useful
 - keep changes minimal
 - avoid premature abstraction
-- prepare for future API consistency
+- improve API consistency before moving deeper
+- prepare the contract for later frontend integration
+
+---
+
+## Integration Note
+
+Frontend work should follow the stabilized backend contract from this phase.
+
+If contract issues are discovered from the frontend side:
+
+- Gemini identifies the integration problem
+- Codex applies the minimal backend correction
+- frontend implementation proceeds only after the contract is accepted
 
 ---
 
@@ -114,12 +135,13 @@ Planned focus:
 Not in scope yet:
 
 - real database-backed event lookup
-- Redis-backed caching/streaming
+- Redis-backed caching or stream fan-out
 - collector-based ingestion
 - PostGIS bbox querying
 - SSE event streaming
-- real filtering/pagination logic
-- frontend/backend production integration
+- real filtering and pagination logic
+- production deployment work
+- large-scale frontend implementation
 
 ---
 
@@ -130,7 +152,9 @@ Phase 2 gives the project:
 - a stable backend entry point
 - an inspectable API contract
 - a place to attach ingestion later
+- a safer integration target for future frontend work
 - a foundation for CI and future tests
+- a backend that still respects the local Docker workflow
 
 Without this phase, later data and dashboard work would drift.
 
@@ -144,6 +168,7 @@ Phase 2 is considered complete when:
 - all base placeholder endpoints work
 - config and shutdown behavior are solid
 - response shapes are defined enough to support the first ingestion work
+- local Docker-backed development remains healthy
 - the team can safely move into the first real data pipeline
 
 ---

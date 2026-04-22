@@ -4,14 +4,15 @@
 
 This document defines the standard development workflow for TheEye.
 
-TheEye is developed through a role-separated multi-agent process:
+TheEye is developed through a controlled, role-separated process using:
 
-- Human vision and product direction
-- ChatGPT for planning, architecture guidance, prompt generation, and review interpretation
-- Codex for scoped implementation
-- Claude Code for review
+- Human direction
+- ChatGPT for planning and prompt generation
+- Codex for primary implementation
+- Gemini for frontend direction and integration-aware UI work
+- Claude Code for selective review
 
-The goal is controlled, reviewable progress instead of freeform code generation.
+The goal is disciplined, reviewable progress rather than freeform code generation.
 
 ---
 
@@ -33,42 +34,58 @@ No coding work should begin unless the current step is explicitly identified.
 
 Responsible for:
 
-- product vision
+- product direction
 - priorities
 - tradeoff decisions
-- approval or rejection of work
-- deciding what gets committed and tagged
+- approval or rejection
+- final commit and tag decisions
 
 ### ChatGPT
 
 Responsible for:
 
-- roadmap planning
-- phase / sprint / step definition
-- Codex implementation prompt generation
+- roadmap, phase, sprint, and step definition
+- architecture framing
+- Codex prompt generation
+- Gemini prompt generation
 - Claude Code review prompt generation
-- interpreting review results
+- review interpretation
 - commit and tag suggestions
-- keeping the work aligned with project direction
+- keeping docs and decisions aligned
 
 ### Codex
 
+Primary implementation agent.
+
 Responsible for:
 
-- implementing the requested step
-- making minimal scoped code changes
-- preserving project structure and conventions
-- avoiding scope creep
+- backend work by default
+- contract-shaping implementation
+- scoped code changes
+- final documentation sync after accepted work
+
+### Gemini
+
+Frontend and integration-focused agent.
+
+Responsible for:
+
+- frontend discovery when design is undefined
+- frontend implementation
+- reviewing the latest backend contract from a frontend perspective
+- identifying integration mismatch before frontend coding begins
 
 ### Claude Code
 
+Selective reviewer.
+
 Responsible for:
 
-- reviewing Codex changes
-- checking scope correctness
-- checking doc alignment
-- identifying risks, regressions, and unnecessary complexity
-- suggesting only minimal fixes when needed
+- milestone-level review
+- risky or cross-cutting review
+- scope validation
+- contract drift detection
+- regression and complexity detection
 
 ---
 
@@ -84,9 +101,19 @@ Before implementation, identify:
 - expected outcome
 - scope boundaries
 
-### Step 2 — Generate Codex prompt
+### Step 2 — Decide whether frontend discovery is needed
 
-ChatGPT prepares a focused implementation prompt containing:
+If the task involves frontend work and the UI direction is still unclear:
+
+- ChatGPT prepares a Gemini discovery prompt
+- Gemini explores the scope and proposes realistic directions
+- no file edits happen yet unless explicitly requested
+
+If UI direction is already clear, skip to the next step.
+
+### Step 3 — Generate Codex prompt
+
+ChatGPT prepares a focused Codex implementation prompt containing:
 
 - files to read first
 - exact goal
@@ -94,45 +121,64 @@ ChatGPT prepares a focused implementation prompt containing:
 - out-of-scope items
 - expected deliverable
 
-### Step 3 — Implement with Codex
+### Step 4 — Implement backend or contract-changing work with Codex
 
-Codex performs only the requested work.
+Codex performs the implementation needed for the current step.
 
-### Step 4 — Generate Claude review prompt
+This is the default first implementation pass when the backend/frontend boundary may be affected.
 
-ChatGPT prepares a review prompt focused on:
+### Step 5 — Gemini integration review before frontend coding
 
-- scope compliance
-- architectural alignment
-- correctness
-- minimalism
-- risk detection
+If frontend work depends on the new backend behavior:
 
-### Step 5 — Review with Claude Code
+- Gemini reads the latest backend diff and relevant docs
+- Gemini identifies contract friction, missing fields, naming issues, or frontend risks
+- Gemini reports the issues before frontend implementation starts
 
-Claude reviews the uncommitted changes and returns one of:
+This is an integration check, not a full final review.
 
-- Accept
-- Accept with minimal patch
-- Rework needed
-- Reject
+### Step 6 — Patch backend if needed
 
-### Step 6 — Interpret the review
+If Gemini finds a legitimate integration issue:
 
-Claude output is evaluated and one of the following happens:
+- ChatGPT interprets it
+- Codex applies the smallest necessary backend patch
+- backend behavior is stabilized before frontend coding
 
-- accept as is
-- apply a minimal patch
-- request a corrected implementation
-- reject and redo the step
+### Step 7 — Implement frontend with Gemini
 
-### Step 7 — Commit
+Once the backend contract is stable:
+
+- Gemini implements the frontend slice
+- frontend should follow the documented API shape
+- loading, empty, and error states should be handled explicitly
+
+### Step 8 — Selective Claude review
+
+Claude Code reviews the integrated result when the change is:
+
+- risky
+- cross-cutting
+- milestone-level
+- close to a tag-worthy checkpoint
+
+Claude is not required for every trivial change, but should be used when the risk justifies it.
+
+### Step 9 — Final documentation sync with Codex
+
+After the accepted implementation and review flow:
+
+- Codex updates the final docs
+- docs should reflect backend behavior, Docker flow, sprint status, and milestone state
+- documentation sync happens last to reduce drift
+
+### Step 10 — Commit
 
 After approval, commit the finished unit.
 
-### Step 8 — Tag
+### Step 11 — Tag
 
-Create a version tag only when a meaningful milestone is complete.
+Create a version tag only when a meaningful milestone or completed phase justifies it.
 
 ---
 
@@ -141,16 +187,29 @@ Create a version tag only when a meaningful milestone is complete.
 ### Allowed
 
 - work only on the current step
-- make small supporting changes directly required by the step
-- update docs if the step clearly changes project understanding
+- make small supporting changes required by the step
+- update docs when accepted work changes project understanding or project state
 
 ### Not Allowed
 
 - unrelated refactors
 - speculative optimization
-- broad architectural changes without planning
+- undocumented backend contract invention
 - hidden feature expansion
-- unnecessary dependencies
+- large architecture changes without planning
+
+---
+
+## Integration Rule
+
+If the frontend/backend boundary changed, the work is not considered complete until:
+
+- the backend contract is stable
+- the frontend follows the latest accepted contract
+- the local flow still works
+- the related docs are synced
+
+This rule prevents silent integration drift.
 
 ---
 
@@ -158,13 +217,11 @@ Create a version tag only when a meaningful milestone is complete.
 
 Claude Code is a reviewer, not a second primary implementer.
 
-Priority order:
+Gemini is not the final backend authority.
 
-1. Is the implementation within scope?
-2. Does it align with AGENTS.md and project docs?
-3. Is it correct and safe?
-4. Is it minimal?
-5. Are fixes actually required?
+Codex is not allowed to silently expand scope.
+
+ChatGPT coordinates the flow and keeps the work aligned with the documented plan.
 
 ---
 
@@ -174,9 +231,10 @@ A commit should usually represent one of these:
 
 - one completed step
 - one approved patch after review
-- one bounded docs update set
+- one bounded docs sync set
+- one integrated slice that still remains clearly reviewable
 
-Avoid mixing unrelated concerns unless it is a deliberate bootstrap commit.
+Avoid mixing unrelated concerns unless it is a deliberate bootstrap change.
 
 ---
 
@@ -184,25 +242,13 @@ Avoid mixing unrelated concerns unless it is a deliberate bootstrap commit.
 
 Tags are for milestones, not routine progress.
 
-Examples:
+Strong candidates for tags include:
 
-- infra and repo governance baseline complete
-- backend foundation milestone complete
-- first ingestion pipeline complete
-- first user-facing dashboard milestone complete
-
----
-
-## Current Active Pattern
-
-The current practical workflow for TheEye is:
-
-1. Human defines direction
-2. ChatGPT defines the next step
-3. Codex implements
-4. Claude Code reviews
-5. ChatGPT interprets the review
-6. Human approves and commits
+- completed foundation milestone
+- completed backend-foundation milestone
+- first ingestion milestone
+- first useful dashboard milestone
+- completed phase
 
 ---
 
@@ -210,11 +256,11 @@ The current practical workflow for TheEye is:
 
 If documents conflict, follow this priority:
 
-1. AGENTS.md
-2. WORKFLOW.md
-3. VERSIONING.md
-4. current phase document under `docs/phases/`
-5. current sprint document under `docs/sprints/`
+1. `AGENTS.md`
+2. `WORKFLOW.md`
+3. `VERSIONING.md`
+4. current phase document
+5. current sprint document
 6. implementation details in code
 
 Implementation must follow the documented plan, not invent a new one.
