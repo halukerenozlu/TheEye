@@ -8,11 +8,15 @@ Phase 2 — Backend Foundation
 
 ## Status
 
-**Active**
+**Completed**
 
 Current remaining work:
 
 - none in Sprint 1 (Steps 1-6 completed)
+
+Next phase:
+
+- Phase 3 — First Ingestion Pipeline
 
 ---
 
@@ -161,4 +165,5 @@ Sprint 1 is complete when:
 This sprint is intentionally foundation-heavy.
 The aim is not feature richness.
 The aim is to create a backend shell that later ingestion work and frontend integration can attach to safely.
+
 

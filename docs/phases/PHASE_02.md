@@ -4,16 +4,19 @@
 
 ## Status
 
-**Active**
+**Completed**
 
-Current active sprint:
+Current final sprint:
 
-- **Sprint 1 — Backend Service Skeleton**
+- Sprint 1 — Backend Service Skeleton (completed)
 
-Current active step:
+Current final step:
 
-- Step 6 completed in Sprint 1; next Phase 2 step is not yet selected
+- Step 6 — Response and error shape cleanup (completed)
 
+Next phase:
+
+- Phase 3 — First Ingestion Pipeline
 ---
 
 ## Purpose
@@ -173,12 +176,13 @@ Phase 2 is considered complete when:
 
 ---
 
-## Likely Next Direction After Phase 2
+## Next Phase
 
-After finishing the remaining cleanup in this phase, the next phase should move toward:
+Phase 3 should now proceed with:
 
 - first ingestion pipeline
 - source normalization
 - storage-backed event flow
 - first real data appearing through `/v1/events`
+
 
