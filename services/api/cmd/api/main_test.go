@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -9,11 +10,21 @@ import (
 
 func testConfig() config {
 	return config{
-		Port:    "8080",
-		AppName: "theeye-api",
-		Env:     "test",
-		Version: "test",
+		Port:        "8080",
+		AppName:     "theeye-api",
+		Env:         "test",
+		Version:     "test",
+		DatabaseURL: "",
 	}
+}
+
+type fakeEventsReader struct {
+	items []Event
+	err   error
+}
+
+func (f fakeEventsReader) ListEvents(_ context.Context) ([]Event, error) {
+	return f.items, f.err
 }
 
 func TestWriteError(t *testing.T) {
@@ -115,7 +126,9 @@ func TestRouterMethodNotAllowedErrorShape(t *testing.T) {
 }
 
 func TestEventsListShapeRemainsStable(t *testing.T) {
-	r := newRouter(testConfig())
+	r := newRouterWithEventsReader(testConfig(), fakeEventsReader{
+		items: []Event{},
+	})
 	req := httptest.NewRequest(http.MethodGet, "/v1/events", nil)
 	rec := httptest.NewRecorder()
 
@@ -132,6 +145,45 @@ func TestEventsListShapeRemainsStable(t *testing.T) {
 
 	if len(got.Items) != 0 {
 		t.Fatalf("items length = %d, want 0", len(got.Items))
+	}
+	if got.NextCursor != "" {
+		t.Fatalf("next_cursor = %q, want empty string", got.NextCursor)
+	}
+}
+
+func TestEventsListReturnsStoredData(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), fakeEventsReader{
+		items: []Event{
+			{
+				ID:        "usgs:abc123",
+				Type:      "earthquake",
+				Title:     "M 3.4 - Test",
+				Status:    "confirmed",
+				Severity:  2,
+				StartedAt: "2023-11-14T22:13:20Z",
+				UpdatedAt: "2023-11-14T22:13:21Z",
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got eventsListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal events list response: %v", err)
+	}
+
+	if len(got.Items) != 1 {
+		t.Fatalf("items length = %d, want 1", len(got.Items))
+	}
+	if got.Items[0].ID != "usgs:abc123" {
+		t.Fatalf("items[0].id = %q, want %q", got.Items[0].ID, "usgs:abc123")
 	}
 	if got.NextCursor != "" {
 		t.Fatalf("next_cursor = %q, want empty string", got.NextCursor)

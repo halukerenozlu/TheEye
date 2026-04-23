@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,13 +15,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/lib/pq"
 )
 
 type config struct {
-	Port    string
-	AppName string
-	Env     string
-	Version string
+	Port        string
+	AppName     string
+	Env         string
+	Version     string
+	DatabaseURL string
 }
 
 type statusResponse struct {
@@ -52,6 +56,73 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
+type eventsReader interface {
+	ListEvents(ctx context.Context) ([]Event, error)
+}
+
+type emptyEventsReader struct{}
+
+func (emptyEventsReader) ListEvents(_ context.Context) ([]Event, error) {
+	return []Event{}, nil
+}
+
+type postgresEventsReader struct {
+	db *sql.DB
+}
+
+func newPostgresEventsReader(db *sql.DB) *postgresEventsReader {
+	return &postgresEventsReader{db: db}
+}
+
+func (r *postgresEventsReader) ListEvents(ctx context.Context) ([]Event, error) {
+	const q = `
+SELECT id, type, title, status, severity, started_at, updated_at
+FROM ingested_events
+ORDER BY updated_at DESC, id ASC;
+`
+
+	rows, err := r.db.QueryContext(ctx, q)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "42P01" {
+			return []Event{}, nil
+		}
+		return nil, fmt.Errorf("query ingested events: %w", err)
+	}
+	defer rows.Close()
+
+	events := make([]Event, 0)
+	for rows.Next() {
+		var (
+			ev        Event
+			startedAt time.Time
+			updatedAt time.Time
+		)
+
+		if err := rows.Scan(
+			&ev.ID,
+			&ev.Type,
+			&ev.Title,
+			&ev.Status,
+			&ev.Severity,
+			&startedAt,
+			&updatedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan ingested event: %w", err)
+		}
+
+		ev.StartedAt = startedAt.UTC().Format(time.RFC3339)
+		ev.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+		events = append(events, ev)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate ingested events: %w", err)
+	}
+
+	return events, nil
+}
+
 func main() {
 	cfg := loadConfig()
 	if err := run(cfg); err != nil {
@@ -60,7 +131,20 @@ func main() {
 }
 
 func run(cfg config) error {
-	r := newRouter(cfg)
+	eventsReader := eventsReader(emptyEventsReader{})
+	var db *sql.DB
+	if cfg.DatabaseURL != "" {
+		var err error
+		db, err = openDB(cfg.DatabaseURL)
+		if err != nil {
+			return err
+		}
+		defer db.Close()
+
+		eventsReader = newPostgresEventsReader(db)
+	}
+
+	r := newRouterWithEventsReader(cfg, eventsReader)
 
 	addr := ":" + cfg.Port
 	srv := &http.Server{
@@ -108,6 +192,10 @@ func run(cfg config) error {
 }
 
 func newRouter(cfg config) chi.Router {
+	return newRouterWithEventsReader(cfg, emptyEventsReader{})
+}
+
+func newRouterWithEventsReader(cfg config, reader eventsReader) chi.Router {
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
@@ -138,9 +226,15 @@ func newRouter(cfg config) chi.Router {
 		})
 	})
 
-	r.Get("/v1/events", func(w http.ResponseWriter, _ *http.Request) {
+	r.Get("/v1/events", func(w http.ResponseWriter, req *http.Request) {
+		items, err := reader.ListEvents(req.Context())
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "events_read_failed", "failed to read events")
+			return
+		}
+
 		writeJSON(w, http.StatusOK, eventsListResponse{
-			Items:      []Event{},
+			Items:      items,
 			NextCursor: "",
 		})
 	})
@@ -154,11 +248,29 @@ func newRouter(cfg config) chi.Router {
 
 func loadConfig() config {
 	return config{
-		Port:    getenv("PORT", "8080"),
-		AppName: getenv("APP_NAME", "theeye-api"),
-		Env:     getenv("APP_ENV", "development"),
-		Version: getenv("APP_VERSION", "dev"),
+		Port:        getenv("PORT", "8080"),
+		AppName:     getenv("APP_NAME", "theeye-api"),
+		Env:         getenv("APP_ENV", "development"),
+		Version:     getenv("APP_VERSION", "dev"),
+		DatabaseURL: os.Getenv("DATABASE_URL"),
 	}
+}
+
+func openDB(databaseURL string) (*sql.DB, error) {
+	db, err := sql.Open("postgres", databaseURL)
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+
+	pingCtx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	if err := db.PingContext(pingCtx); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("ping database: %w", err)
+	}
+
+	return db, nil
 }
 
 func writeJSON(w http.ResponseWriter, status int, payload any) {

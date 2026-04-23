@@ -4,7 +4,7 @@
 
 ## Status
 
-**Active**
+**Completed**
 
 Current sprint:
 
@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 5 - Expose real data through `/v1/events`
+- Sprint 1 completed; no active step in Phase 3
 
 ---
 
@@ -131,6 +131,28 @@ Not added in Step 4:
 - scheduler logic
 - multi-source abstraction
 - Event model expansion
+
+---
+
+## Step 5 Completion - Expose Real Data Through `/v1/events`
+
+Status: Completed
+
+Delivered:
+
+- `GET /v1/events` now reads stored real data
+- response shape remains stable with `items` and `next_cursor`
+- stable empty response remains when no stored data is available
+- minimal backend tests were added/updated for real-data and empty-data behavior
+
+Not added in Step 5:
+
+- `/v1/events/{id}` behavior changes
+- filtering/sorting/pagination expansion
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
 
 ---
 

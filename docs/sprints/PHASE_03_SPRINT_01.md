@@ -8,11 +8,11 @@ Phase 3 - First Ingestion Pipeline
 
 ## Status
 
-**Active**
+**Completed**
 
 Current active step:
 
-- Step 5 - Expose real data through `/v1/events`
+- none (Sprint 1 completed)
 
 ---
 
@@ -145,19 +145,32 @@ Not added in Step 4:
 
 ### Step 5 - Expose real data through `/v1/events`
 
-Status: Active
+Status: Completed
 
-Delivered when:
+Delivered:
 
-- existing route returns stored real records
-- response shape stays stable
+- `GET /v1/events` now reads stored real data
+- response shape remains stable with `items` and `next_cursor`
+- stable empty response remains when no stored data is available
+- minimal backend tests were added/updated for real-data and empty-data behavior
+
+Not added in Step 5:
+
+- `/v1/events/{id}` behavior changes
+- filtering/sorting/pagination expansion
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
 
 ### Step 6 - Tests and docs sync
 
-Delivered when:
+Status: Completed
+
+Delivered:
 
 - minimal backend tests pass for ingestion slice
-- docs reflect accepted implementation state
+- sprint docs reflect accepted implementation state
 
 ---
 
