@@ -4,15 +4,15 @@
 
 ## Status
 
-**Active**
+**Completed**
 
 Current sprint:
 
-- Sprint 1 - Events API Foundations
+- Sprint 1 - Events API Foundations (Completed)
 
 Current active step:
 
-- Step 6 - Tests and docs sync
+- none (Phase 4 completed)
 
 ---
 
@@ -114,6 +114,17 @@ Not added in Step 5:
 - scheduler logic
 - multi-source abstraction
 - Event model redesign
+
+## Step 6 Completion - Tests and Docs Sync
+
+Status: Completed
+
+Delivered:
+
+- tests and doc sync for the accepted Sprint 1 work are complete
+- final backend tests passed for the accepted Sprint 1 API scope
+- Docker-backed smoke validation passed for health, meta, and events routes
+- no additional API scope was added in Step 6
 
 ---
 

@@ -8,11 +8,11 @@ Phase 4 - API Layer
 
 ## Status
 
-**Active**
+**Completed**
 
 Current active step:
 
-- Step 6 - Tests and docs sync
+- none (Sprint 1 completed)
 
 ---
 
@@ -152,10 +152,16 @@ Not added in Step 5:
 
 ### Step 6 - Tests and docs sync
 
-Delivered when:
+Status: Completed
+
+Delivered:
 
 - minimal backend tests cover detail/list/filter/sort/pagination behavior
 - sprint and phase docs reflect accepted implementation state
+- tests and doc sync for the accepted Sprint 1 work are complete
+- final backend tests passed for the accepted Sprint 1 API scope
+- Docker-backed smoke validation passed for health, meta, and events routes
+- no additional API scope was added in Step 6
 
 ---
 
