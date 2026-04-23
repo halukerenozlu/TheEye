@@ -12,7 +12,7 @@ Phase 5 - First Dashboard
 
 Current active step:
 
-- Step 1 - Dashboard shell layout
+- Step 2 - Event feed + basic filters wiring
 
 ---
 
@@ -48,10 +48,20 @@ Deliver the first usable dashboard slice with map-first interaction using curren
 
 ### Step 1 - Dashboard shell layout
 
-Delivered when:
+Status: Completed
 
-- top bar, left event/feed panel, center map area, and right detail panel are scaffolded
-- dark and calm baseline styling is established
+Delivered:
+
+- dashboard shell layout created
+- top bar, left feed panel, center map area, and right detail panel scaffolded
+- restrained dark visual hierarchy established
+- loading/empty placeholders added where relevant
+
+Not added in Step 1:
+
+- real API data wiring
+- map library integration
+- advanced interaction logic
 
 ### Step 2 - Event feed + basic filters wiring
 
@@ -98,4 +108,3 @@ Sprint 1 is complete when:
 - real API data drives the core dashboard interactions
 - click-first interaction is clear and stable
 - MVP scope remains restrained and reviewable
-

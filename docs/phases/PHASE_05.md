@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 1 - Dashboard shell layout
+- Step 2 - Event feed + basic filters wiring
 
 ---
 
@@ -46,6 +46,25 @@ Available API behavior for dashboard integration:
 - `GET /v1/events/{id}`
 - filtering, sorting, and pagination support
 - map-ready geometry exposure when present in stored records
+
+---
+
+## Step 1 Completion - Dashboard Shell Layout
+
+Status: Completed
+
+Delivered:
+
+- dashboard shell layout created
+- top bar, left feed panel, center map area, and right detail panel scaffolded
+- restrained dark visual hierarchy established
+- loading/empty placeholders added where relevant
+
+Not added in Step 1:
+
+- real API data wiring
+- map library integration
+- advanced interaction logic
 
 ---
 
@@ -91,4 +110,3 @@ Phase 5 is complete when:
 ## Next Phase
 
 - Phase 6 - Better UX and Product Depth
-
