@@ -12,7 +12,7 @@ Phase 5 - First Dashboard
 
 Current active step:
 
-- Step 2 - Event feed + basic filters wiring
+- Step 3 - Map marker rendering from current API data
 
 ---
 
@@ -65,10 +65,22 @@ Not added in Step 1:
 
 ### Step 2 - Event feed + basic filters wiring
 
-Delivered when:
+Status: Completed
 
-- feed is wired to real `GET /v1/events` data
-- existing filter/query behavior is used without contract drift
+Delivered:
+
+- left Signal Feed panel wired to real `/v1/events` data
+- basic backend-supported filters wired
+- loading / empty / error handling integrated into the existing dashboard shell
+- design language and shell layout preserved
+- right detail panel remains mostly scaffolded
+- map area remains placeholder for the next step
+
+Not added in Step 2:
+
+- full map rendering
+- full right-panel detail wiring
+- backend contract expansion beyond the already accepted readiness patch
 
 ### Step 3 - Map marker rendering from current API data
 

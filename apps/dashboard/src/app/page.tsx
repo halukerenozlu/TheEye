@@ -1,22 +1,60 @@
 "use client";
 
-/**
- * TheEye Dashboard Shell
- * Phase 5 / Sprint 1 / Step 1
- *
- * This shell establishes the "Command Center Lite" layout:
- * - Top Bar: Platform meta and status
- * - Left Panel: Event feed and filters scaffolding
- * - Center Panel: Map area (placeholder for MapLibre)
- * - Right Panel: Event detail and intelligence
- */
+import { useEffect, useState, useCallback } from "react";
+import { Event, EventFilters } from "../types";
+import { fetchEvents } from "../lib/api";
 
 export default function DashboardPage() {
+  // --- State ---
+  const [events, setEvents] = useState<Event[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [filters, setFilters] = useState<EventFilters>({
+    sort: "updated_at_desc",
+  });
+
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+
+  // --- Actions ---
+  const loadEvents = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchEvents(filters);
+      setEvents(data.items);
+    } catch (err) {
+      console.error(err);
+      setError("Failed to sync with signal intelligence");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [filters]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  const toggleSort = () => {
+    setFilters((prev) => ({
+      ...prev,
+      sort:
+        prev.sort === "updated_at_desc" ? "updated_at_asc" : "updated_at_desc",
+    }));
+  };
+
+  const updateTypeFilter = (type: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      type: type || undefined,
+    }));
+  };
+
   return (
     <div className="flex h-screen w-full flex-col overflow-hidden bg-black font-sans text-zinc-300 antialiased selection:bg-zinc-800 selection:text-white">
       {/* 
         TOP BAR
-        Restrained, high-contrast text for branding, low-contrast for secondary info.
       */}
       <header className="flex h-12 shrink-0 items-center justify-between border-b border-zinc-800 bg-zinc-950 px-4">
         <div className="flex items-center gap-4">
@@ -31,9 +69,11 @@ export default function DashboardPage() {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/50 px-2.5 py-1">
-            <div className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <div
+              className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)] ${isLoading ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`}
+            />
             <span className="text-[9px] font-semibold text-zinc-400 uppercase tracking-tighter">
-              System Ready
+              {isLoading ? "Syncing Signals..." : "System Ready"}
             </span>
           </div>
         </div>
@@ -41,12 +81,10 @@ export default function DashboardPage() {
 
       {/* 
         MAIN CONTENT AREA
-        Three-column layout for high-density information management.
       */}
       <div className="flex flex-1 overflow-hidden">
         {/* 
           LEFT PANEL: SIGNAL FEED
-          Primary list of incoming events.
         */}
         <aside className="flex w-72 shrink-0 flex-col border-r border-zinc-800 bg-zinc-900/20 backdrop-blur-md">
           <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3">
@@ -54,52 +92,147 @@ export default function DashboardPage() {
               Signal Feed
             </h2>
             <div className="flex gap-1.5">
-              <div className="h-1.5 w-1.5 rounded-full bg-zinc-700" />
-              <div className="h-1.5 w-1.5 rounded-full bg-zinc-700" />
+              <button
+                onClick={loadEvents}
+                title="Refresh feed"
+                className="h-1.5 w-1.5 rounded-full bg-zinc-700 hover:bg-zinc-500 transition-colors"
+              />
+              <button
+                onClick={toggleSort}
+                title={`Sort: ${filters.sort === "updated_at_desc" ? "Newest" : "Oldest"}`}
+                className={`h-1.5 w-1.5 rounded-full ${filters.sort === "updated_at_asc" ? "bg-emerald-500" : "bg-zinc-700"} hover:opacity-80 transition-colors`}
+              />
             </div>
           </div>
 
           <div className="flex-1 overflow-y-auto">
-            {/* 
-              FEED PLACEHOLDER
-              Establishing the visual pattern for list items.
-            */}
-            <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-dashed border-zinc-800 text-zinc-800">
-                <svg
-                  width="24"
-                  height="24"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M2 12h3l2 8 4-16 4 16 2-8h3" />
-                </svg>
+            {isLoading && events.length === 0 ? (
+              <div className="flex h-full items-center justify-center p-8 text-center">
+                <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-zinc-700 animate-pulse">
+                  Acquiring Stream...
+                </span>
               </div>
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-600">
-                Awaiting incoming signals
-              </p>
-            </div>
+            ) : error ? (
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center">
+                <div className="mb-2 text-rose-900">
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                </div>
+                <p className="text-[9px] uppercase tracking-widest text-rose-900/80">
+                  {error}
+                </p>
+              </div>
+            ) : events.length === 0 ? (
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center text-zinc-700">
+                <p className="text-[9px] uppercase tracking-[0.2em]">
+                  No active signals detected
+                </p>
+              </div>
+            ) : (
+              <div className="divide-y divide-zinc-800/30">
+                {events.map((event) => (
+                  <button
+                    key={event.id}
+                    onClick={() => setSelectedEventId(event.id)}
+                    className={`flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-zinc-800/30 ${selectedEventId === event.id ? "bg-zinc-800/50" : ""}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-[8px] font-mono font-bold text-zinc-500 uppercase tracking-tighter">
+                        {event.type}
+                      </span>
+                      <span className="text-[8px] font-mono text-zinc-600">
+                        {new Date(event.started_at).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                          hour12: false,
+                        })}
+                      </span>
+                    </div>
+                    <h3 className="line-clamp-2 text-[11px] font-medium leading-tight text-zinc-300">
+                      {event.title}
+                    </h3>
+                    <div className="mt-1 flex items-center gap-1.5">
+                      <div
+                        className={`h-1 w-1 rounded-full ${getSeverityColor(event.severity)}`}
+                      />
+                      <span className="text-[8px] font-medium text-zinc-600 uppercase tracking-widest">
+                        Lvl {event.severity}{" "}
+                        <span className="mx-1 opacity-30">|</span>{" "}
+                        {event.status}
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          <div className="border-t border-zinc-800/50 p-3 bg-zinc-950/40">
-            <div className="h-7 w-full rounded border border-zinc-800 bg-zinc-900/50 flex items-center px-2">
-              <span className="text-[9px] text-zinc-600 uppercase tracking-widest">
-                Filter signals...
+          <div className="border-t border-zinc-800/50 p-3 bg-zinc-950/40 relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className="flex h-7 w-full items-center justify-between rounded border border-zinc-800 bg-zinc-900/50 px-2 text-[9px] text-zinc-400 uppercase tracking-widest outline-none hover:border-zinc-700 transition-colors"
+            >
+              <span className="truncate">
+                {filters.type ? filters.type + "s" : "All Categories"}
               </span>
-            </div>
+              <svg
+                width="10"
+                height="10"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className={`shrink-0 transition-transform duration-200 ${isFilterOpen ? "rotate-180" : ""}`}
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+
+            {isFilterOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setIsFilterOpen(false)}
+                />
+                <div className="absolute bottom-11 left-3 right-3 z-20 overflow-hidden rounded border border-zinc-800 bg-zinc-950 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+                  {[
+                    { label: "All Categories", value: "" },
+                    { label: "Earthquakes", value: "earthquake" },
+                    { label: "Wildfires", value: "wildfire" },
+                    { label: "Storms", value: "storm" },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        updateTypeFilter(option.value);
+                        setIsFilterOpen(false);
+                      }}
+                      className={`flex h-8 w-full items-center px-3 text-[9px] uppercase tracking-widest transition-colors hover:bg-zinc-900 ${filters.type === option.value || (!filters.type && !option.value) ? "text-white font-bold bg-zinc-900" : "text-zinc-500"}`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </aside>
 
         {/* 
           CENTER PANEL: MAP VIEWPORT
-          The primary exploration surface.
         */}
         <main className="relative flex-1 bg-zinc-950 overflow-hidden">
-          {/* Subtle Grid Background */}
           <div
             className="absolute inset-0 opacity-[0.03]"
             style={{
@@ -109,7 +242,6 @@ export default function DashboardPage() {
             }}
           />
 
-          {/* Map Initialization State */}
           <div className="absolute inset-0 flex flex-col items-center justify-center">
             <div className="relative mb-6 h-32 w-32">
               <div className="absolute inset-0 rounded-full border border-zinc-900" />
@@ -121,35 +253,32 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-col items-center gap-2">
               <span className="text-[10px] font-mono uppercase tracking-[0.4em] text-zinc-600">
-                Initializing Geospatial Engine
+                Geospatial Engine Scaffolding
               </span>
               <div className="h-0.5 w-32 overflow-hidden rounded-full bg-zinc-900">
-                <div className="h-full w-1/3 animate-[loading_2s_infinite_ease-in-out] bg-zinc-700" />
+                <div className="h-full w-full bg-zinc-800/50" />
               </div>
             </div>
           </div>
 
-          {/* Map Controls (Scaffolding) */}
           <div className="absolute bottom-6 right-6 flex flex-col gap-1.5">
-            <button className="flex h-8 w-8 items-center justify-center rounded border border-zinc-800 bg-zinc-900/80 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 transition-colors">
+            <div className="flex h-8 w-8 items-center justify-center rounded border border-zinc-800 bg-zinc-900/80 text-zinc-700">
               <span className="text-xs">+</span>
-            </button>
-            <button className="flex h-8 w-8 items-center justify-center rounded border border-zinc-800 bg-zinc-900/80 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300 transition-colors">
+            </div>
+            <div className="flex h-8 w-8 items-center justify-center rounded border border-zinc-800 bg-zinc-900/80 text-zinc-700">
               <span className="text-xs">-</span>
-            </button>
+            </div>
           </div>
 
-          {/* Map Attribution/Status */}
           <div className="absolute bottom-2 left-4">
             <span className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest">
-              Lat: 0.0000 Lon: 0.0000
+              Live Coordinate Stream Pending
             </span>
           </div>
         </main>
 
         {/* 
           RIGHT PANEL: EVENT INTELLIGENCE
-          Detailed information about the selected entity.
         */}
         <aside className="flex w-96 shrink-0 flex-col border-l border-zinc-800 bg-zinc-900/20 backdrop-blur-md">
           <div className="border-b border-zinc-800/50 px-4 py-3">
@@ -159,19 +288,57 @@ export default function DashboardPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
-            {/* 
-              DETAIL PLACEHOLDER
-            */}
-            <div className="flex h-full flex-col items-center justify-center text-center">
-              <div className="mb-4 h-px w-8 bg-zinc-800" />
-              <p className="max-w-45 text-[10px] leading-relaxed text-zinc-600 uppercase tracking-wider">
-                Select a signal from the feed or map to inspect metadata and
-                intelligence.
-              </p>
-            </div>
+            {selectedEventId ? (
+              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-2 duration-300">
+                <div>
+                  <div className="mb-1 text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">
+                    ID: {selectedEventId}
+                  </div>
+                  <h2 className="text-lg font-medium leading-tight text-white">
+                    {events.find((e) => e.id === selectedEventId)?.title}
+                  </h2>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
+                      Status
+                    </span>
+                    <span className="text-xs text-zinc-400 capitalize">
+                      {events.find((e) => e.id === selectedEventId)?.status}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
+                      Severity
+                    </span>
+                    <span className="text-xs text-zinc-400">
+                      Level{" "}
+                      {events.find((e) => e.id === selectedEventId)?.severity}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="h-px w-full bg-zinc-800/50" />
+
+                <div className="flex flex-col gap-4">
+                  <p className="text-[10px] leading-relaxed text-zinc-500 uppercase tracking-wider">
+                    Further intelligence awaiting integration. Full metadata
+                    wiring scheduled for Step 4.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center text-center">
+                <div className="mb-4 h-px w-8 bg-zinc-800" />
+                <p className="max-w-45 text-[10px] leading-relaxed text-zinc-600 uppercase tracking-wider">
+                  Select a signal from the feed or map to inspect metadata and
+                  intelligence.
+                </p>
+              </div>
+            )}
           </div>
 
-          {/* Secondary Panel Actions Scaffolding */}
           <div className="border-t border-zinc-800/50 p-4 bg-zinc-950/20">
             <div className="flex gap-2">
               <div className="h-1.5 w-1.5 rounded-full bg-zinc-800" />
@@ -181,17 +348,13 @@ export default function DashboardPage() {
           </div>
         </aside>
       </div>
-
-      <style jsx global>{`
-        @keyframes loading {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(300%);
-          }
-        }
-      `}</style>
     </div>
   );
+}
+
+function getSeverityColor(severity: number): string {
+  if (severity >= 4) return "bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.5)]";
+  if (severity >= 2)
+    return "bg-amber-500 shadow-[0_0_4px_rgba(245,158,11,0.5)]";
+  return "bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.5)]";
 }

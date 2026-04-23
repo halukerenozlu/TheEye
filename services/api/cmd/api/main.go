@@ -114,6 +114,13 @@ var supportedEventsListQueryParams = map[string]struct{}{
 	"cursor":         {},
 }
 
+var localDevelopmentAllowedOrigins = map[string]struct{}{
+	"http://localhost:3000": {},
+	"http://127.0.0.1:3000": {},
+	"http://localhost:3001": {},
+	"http://127.0.0.1:3001": {},
+}
+
 func newPostgresEventsReader(db *sql.DB) *postgresEventsReader {
 	return &postgresEventsReader{db: db}
 }
@@ -494,6 +501,9 @@ func newRouterWithEventsReader(cfg config, reader eventsReader) chi.Router {
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.Timeout(10 * time.Second))
+	if cfg.Env == "development" {
+		r.Use(localDevelopmentCORSMiddleware)
+	}
 	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusNotFound, "route_not_found", "route not found")
 	})
@@ -690,4 +700,35 @@ func applyEventGeometry(event *Event, longitude sql.NullFloat64, latitude sql.Nu
 		Longitude: longitude.Float64,
 		Latitude:  latitude.Float64,
 	}
+}
+
+func localDevelopmentCORSMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		origin := req.Header.Get("Origin")
+		if origin == "" {
+			next.ServeHTTP(w, req)
+			return
+		}
+
+		w.Header().Add("Vary", "Origin")
+
+		if _, ok := localDevelopmentAllowedOrigins[origin]; !ok {
+			next.ServeHTTP(w, req)
+			return
+		}
+
+		w.Header().Set("Access-Control-Allow-Origin", origin)
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Accept, Content-Type, Authorization")
+		w.Header().Set("Access-Control-Max-Age", "600")
+		w.Header().Add("Vary", "Access-Control-Request-Method")
+		w.Header().Add("Vary", "Access-Control-Request-Headers")
+
+		if req.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(w, req)
+	})
 }

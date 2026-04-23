@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 2 - Event feed + basic filters wiring
+- Step 3 - Map marker rendering from current API data
 
 ---
 
@@ -65,6 +65,25 @@ Not added in Step 1:
 - real API data wiring
 - map library integration
 - advanced interaction logic
+
+## Step 2 Completion - Event Feed + Basic Filters Wiring
+
+Status: Completed
+
+Delivered:
+
+- left Signal Feed panel wired to real `/v1/events` data
+- basic backend-supported filters wired
+- loading / empty / error handling integrated into the existing dashboard shell
+- design language and shell layout preserved
+- right detail panel remains mostly scaffolded
+- map area remains placeholder for the next step
+
+Not added in Step 2:
+
+- full map rendering
+- full right-panel detail wiring
+- backend contract expansion beyond the already accepted readiness patch
 
 ---
 

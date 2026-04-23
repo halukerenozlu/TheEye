@@ -21,6 +21,16 @@ func testConfig() config {
 	}
 }
 
+func developmentTestConfig() config {
+	return config{
+		Port:        "8080",
+		AppName:     "theeye-api",
+		Env:         "development",
+		Version:     "test",
+		DatabaseURL: "",
+	}
+}
+
 type fakeEventsReader struct {
 	items []Event
 	err   error
@@ -797,5 +807,44 @@ func TestEventsDetailIncludesGeometryWhenAvailable(t *testing.T) {
 	}
 	if got.Geometry.Latitude != 35.7 {
 		t.Fatalf("geometry.latitude = %v, want %v", got.Geometry.Latitude, 35.7)
+	}
+}
+
+func TestLocalDevelopmentCORSAllowsDashboardOrigin(t *testing.T) {
+	r := newRouterWithEventsReader(developmentTestConfig(), &fakeEventsReader{
+		items: []Event{},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:3000" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want %q", got, "http://localhost:3000")
+	}
+}
+
+func TestLocalDevelopmentCORSPreflight(t *testing.T) {
+	r := newRouterWithEventsReader(developmentTestConfig(), &fakeEventsReader{})
+	req := httptest.NewRequest(http.MethodOptions, "/v1/events", nil)
+	req.Header.Set("Origin", "http://localhost:3000")
+	req.Header.Set("Access-Control-Request-Method", "GET")
+	req.Header.Set("Access-Control-Request-Headers", "Content-Type")
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNoContent)
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Origin"); got != "http://localhost:3000" {
+		t.Fatalf("Access-Control-Allow-Origin = %q, want %q", got, "http://localhost:3000")
+	}
+	if got := rec.Header().Get("Access-Control-Allow-Methods"); got != "GET, OPTIONS" {
+		t.Fatalf("Access-Control-Allow-Methods = %q, want %q", got, "GET, OPTIONS")
 	}
 }
