@@ -12,7 +12,7 @@ Phase 4 - API Layer
 
 Current active step:
 
-- Step 2 - Events list query baseline cleanup
+- Step 4 - Sorting support
 
 ---
 
@@ -65,19 +65,46 @@ Not added in Step 1:
 
 ### Step 2 - Events list query baseline cleanup
 
-Status: Active
+Status: Completed
 
-Delivered when:
+Delivered:
 
 - `/v1/events` list behavior remains stable against real stored records
 - no contract drift is introduced while preparing list query improvements
+- baseline query parsing/validation added for `GET /v1/events`
+- default route behavior remains unchanged when no query params are provided
+
+Not added in Step 2:
+
+- sorting changes
+- pagination changes
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
+- Event model redesign
 
 ### Step 3 - Filtering support
 
-Delivered when:
+Status: Completed
+
+Delivered:
 
 - agreed MVP filters are implemented with explicit parameter handling
 - invalid query parameters are handled predictably
+- optional filtering added for `type`, `started_after`, `started_before`
+- invalid query handling now returns consistent JSON `400` errors
+- minimal backend tests added/updated for filtering and invalid query cases
+
+Not added in Step 3:
+
+- sorting changes
+- pagination changes
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
+- Event model redesign
 
 ### Step 4 - Sorting support
 

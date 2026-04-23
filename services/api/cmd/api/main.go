@@ -8,8 +8,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
+	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -59,13 +62,13 @@ type errorResponse struct {
 var errEventNotFound = errors.New("event not found")
 
 type eventsReader interface {
-	ListEvents(ctx context.Context) ([]Event, error)
+	ListEvents(ctx context.Context, filters listEventsFilters) ([]Event, error)
 	GetEventByID(ctx context.Context, id string) (Event, error)
 }
 
 type emptyEventsReader struct{}
 
-func (emptyEventsReader) ListEvents(_ context.Context) ([]Event, error) {
+func (emptyEventsReader) ListEvents(_ context.Context, _ listEventsFilters) ([]Event, error) {
 	return []Event{}, nil
 }
 
@@ -77,18 +80,56 @@ type postgresEventsReader struct {
 	db *sql.DB
 }
 
+type listEventsFilters struct {
+	Type          string
+	StartedAfter  *time.Time
+	StartedBefore *time.Time
+}
+
+var supportedEventsListQueryParams = map[string]struct{}{
+	"type":           {},
+	"started_after":  {},
+	"started_before": {},
+}
+
 func newPostgresEventsReader(db *sql.DB) *postgresEventsReader {
 	return &postgresEventsReader{db: db}
 }
 
-func (r *postgresEventsReader) ListEvents(ctx context.Context) ([]Event, error) {
-	const q = `
+func (r *postgresEventsReader) ListEvents(ctx context.Context, filters listEventsFilters) ([]Event, error) {
+	q := `
 SELECT id, type, title, status, severity, started_at, updated_at
 FROM ingested_events
-ORDER BY updated_at DESC, id ASC;
 `
+	args := make([]any, 0, 3)
+	where := make([]string, 0, 3)
+	nextPlaceholder := 1
 
-	rows, err := r.db.QueryContext(ctx, q)
+	if filters.Type != "" {
+		where = append(where, "type = $"+strconv.Itoa(nextPlaceholder))
+		args = append(args, filters.Type)
+		nextPlaceholder++
+	}
+
+	if filters.StartedAfter != nil {
+		where = append(where, "started_at >= $"+strconv.Itoa(nextPlaceholder))
+		args = append(args, *filters.StartedAfter)
+		nextPlaceholder++
+	}
+
+	if filters.StartedBefore != nil {
+		where = append(where, "started_at <= $"+strconv.Itoa(nextPlaceholder))
+		args = append(args, *filters.StartedBefore)
+		nextPlaceholder++
+	}
+
+	if len(where) > 0 {
+		q += "WHERE " + strings.Join(where, " AND ") + "\n"
+	}
+
+	q += "ORDER BY updated_at DESC, id ASC;"
+
+	rows, err := r.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "42P01" {
@@ -276,7 +317,13 @@ func newRouterWithEventsReader(cfg config, reader eventsReader) chi.Router {
 	})
 
 	r.Get("/v1/events", func(w http.ResponseWriter, req *http.Request) {
-		items, err := reader.ListEvents(req.Context())
+		filters, err := parseListEventsFilters(req.URL.Query())
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "bad_request", err.Error())
+			return
+		}
+
+		items, err := reader.ListEvents(req.Context(), filters)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "events_read_failed", "failed to read events")
 			return
@@ -356,4 +403,42 @@ func getenv(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func parseListEventsFilters(values url.Values) (listEventsFilters, error) {
+	var filters listEventsFilters
+
+	for key := range values {
+		if _, ok := supportedEventsListQueryParams[key]; !ok {
+			return listEventsFilters{}, fmt.Errorf("invalid query parameter: %s", key)
+		}
+	}
+
+	if rawType := strings.TrimSpace(values.Get("type")); rawType != "" {
+		filters.Type = rawType
+	}
+
+	if rawStartedAfter := strings.TrimSpace(values.Get("started_after")); rawStartedAfter != "" {
+		startedAfter, err := time.Parse(time.RFC3339, rawStartedAfter)
+		if err != nil {
+			return listEventsFilters{}, errors.New("invalid query parameter: started_after must be RFC3339")
+		}
+		startedAfter = startedAfter.UTC()
+		filters.StartedAfter = &startedAfter
+	}
+
+	if rawStartedBefore := strings.TrimSpace(values.Get("started_before")); rawStartedBefore != "" {
+		startedBefore, err := time.Parse(time.RFC3339, rawStartedBefore)
+		if err != nil {
+			return listEventsFilters{}, errors.New("invalid query parameter: started_before must be RFC3339")
+		}
+		startedBefore = startedBefore.UTC()
+		filters.StartedBefore = &startedBefore
+	}
+
+	if filters.StartedAfter != nil && filters.StartedBefore != nil && filters.StartedAfter.After(*filters.StartedBefore) {
+		return listEventsFilters{}, errors.New("invalid query parameter: started_after must be before or equal to started_before")
+	}
+
+	return filters, nil
 }
