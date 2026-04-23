@@ -710,3 +710,92 @@ func TestEventsListInvalidCursorWithoutLimit(t *testing.T) {
 		t.Fatalf("message = %q, want %q", got.Message, "invalid query parameter: cursor requires limit")
 	}
 }
+
+func TestEventsListIncludesGeometryWhenAvailable(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), &fakeEventsReader{
+		items: []Event{
+			{
+				ID:        "usgs:abc123",
+				Type:      "earthquake",
+				Title:     "M 3.4 - Test",
+				Status:    "confirmed",
+				Severity:  2,
+				StartedAt: "2023-11-14T22:13:20Z",
+				UpdatedAt: "2023-11-14T22:13:21Z",
+				Geometry: &EventGeometry{
+					Longitude: -117.5,
+					Latitude:  35.7,
+				},
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got eventsListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal events list response: %v", err)
+	}
+
+	if len(got.Items) != 1 {
+		t.Fatalf("items length = %d, want 1", len(got.Items))
+	}
+	if got.Items[0].Geometry == nil {
+		t.Fatal("items[0].geometry = nil, want non-nil")
+	}
+	if got.Items[0].Geometry.Longitude != -117.5 {
+		t.Fatalf("items[0].geometry.longitude = %v, want %v", got.Items[0].Geometry.Longitude, -117.5)
+	}
+	if got.Items[0].Geometry.Latitude != 35.7 {
+		t.Fatalf("items[0].geometry.latitude = %v, want %v", got.Items[0].Geometry.Latitude, 35.7)
+	}
+}
+
+func TestEventsDetailIncludesGeometryWhenAvailable(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), &fakeEventsReader{
+		eventByID: map[string]Event{
+			"usgs:abc123": {
+				ID:        "usgs:abc123",
+				Type:      "earthquake",
+				Title:     "M 3.4 - Test",
+				Status:    "confirmed",
+				Severity:  2,
+				StartedAt: "2023-11-14T22:13:20Z",
+				UpdatedAt: "2023-11-14T22:13:21Z",
+				Geometry: &EventGeometry{
+					Longitude: -117.5,
+					Latitude:  35.7,
+				},
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events/usgs:abc123", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got Event
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal event detail response: %v", err)
+	}
+
+	if got.Geometry == nil {
+		t.Fatal("geometry = nil, want non-nil")
+	}
+	if got.Geometry.Longitude != -117.5 {
+		t.Fatalf("geometry.longitude = %v, want %v", got.Geometry.Longitude, -117.5)
+	}
+	if got.Geometry.Latitude != 35.7 {
+		t.Fatalf("geometry.latitude = %v, want %v", got.Geometry.Latitude, 35.7)
+	}
+}

@@ -32,12 +32,24 @@ CREATE TABLE IF NOT EXISTS ingested_events (
   severity INTEGER NOT NULL,
   started_at TIMESTAMPTZ NOT NULL,
   updated_at TIMESTAMPTZ NOT NULL,
+  longitude DOUBLE PRECISION,
+  latitude DOUBLE PRECISION,
   ingested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (source_name, source_event_id)
 );`
 
 	if _, err := s.db.ExecContext(ctx, ddl); err != nil {
 		return fmt.Errorf("ensure ingested_events schema: %w", err)
+	}
+
+	const addLongitude = `ALTER TABLE ingested_events ADD COLUMN IF NOT EXISTS longitude DOUBLE PRECISION;`
+	if _, err := s.db.ExecContext(ctx, addLongitude); err != nil {
+		return fmt.Errorf("ensure ingested_events longitude column: %w", err)
+	}
+
+	const addLatitude = `ALTER TABLE ingested_events ADD COLUMN IF NOT EXISTS latitude DOUBLE PRECISION;`
+	if _, err := s.db.ExecContext(ctx, addLatitude); err != nil {
+		return fmt.Errorf("ensure ingested_events latitude column: %w", err)
 	}
 
 	return nil
@@ -59,8 +71,10 @@ INSERT INTO ingested_events (
   status,
   severity,
   started_at,
-  updated_at
-) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+  updated_at,
+  longitude,
+  latitude
+) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 ON CONFLICT (source_name, source_event_id) DO UPDATE SET
   id = EXCLUDED.id,
   type = EXCLUDED.type,
@@ -69,6 +83,8 @@ ON CONFLICT (source_name, source_event_id) DO UPDATE SET
   severity = EXCLUDED.severity,
   started_at = EXCLUDED.started_at,
   updated_at = EXCLUDED.updated_at,
+  longitude = EXCLUDED.longitude,
+  latitude = EXCLUDED.latitude,
   ingested_at = NOW();`
 
 	for _, event := range unique {
@@ -99,6 +115,8 @@ ON CONFLICT (source_name, source_event_id) DO UPDATE SET
 			event.Severity,
 			startedAt,
 			updatedAt,
+			event.Longitude,
+			event.Latitude,
 		); err != nil {
 			return 0, fmt.Errorf("upsert normalized event %q: %w", event.ID, err)
 		}

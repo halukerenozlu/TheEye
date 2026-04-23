@@ -40,13 +40,19 @@ type metaResponse struct {
 }
 
 type Event struct {
-	ID        string `json:"id"`
-	Type      string `json:"type"`
-	Title     string `json:"title"`
-	Status    string `json:"status"`
-	Severity  int    `json:"severity"`
-	StartedAt string `json:"started_at"`
-	UpdatedAt string `json:"updated_at"`
+	ID        string         `json:"id"`
+	Type      string         `json:"type"`
+	Title     string         `json:"title"`
+	Status    string         `json:"status"`
+	Severity  int            `json:"severity"`
+	StartedAt string         `json:"started_at"`
+	UpdatedAt string         `json:"updated_at"`
+	Geometry  *EventGeometry `json:"geometry,omitempty"`
+}
+
+type EventGeometry struct {
+	Longitude float64 `json:"longitude"`
+	Latitude  float64 `json:"latitude"`
 }
 
 type eventsListResponse struct {
@@ -114,6 +120,113 @@ func newPostgresEventsReader(db *sql.DB) *postgresEventsReader {
 
 func (r *postgresEventsReader) ListEvents(ctx context.Context, query listEventsQuery) (eventsListResponse, error) {
 	q := `
+SELECT id, type, title, status, severity, started_at, updated_at, longitude, latitude
+FROM ingested_events
+`
+	args := make([]any, 0, 5)
+	where := make([]string, 0, 3)
+	nextPlaceholder := 1
+
+	if query.Type != "" {
+		where = append(where, "type = $"+strconv.Itoa(nextPlaceholder))
+		args = append(args, query.Type)
+		nextPlaceholder++
+	}
+
+	if query.StartedAfter != nil {
+		where = append(where, "started_at >= $"+strconv.Itoa(nextPlaceholder))
+		args = append(args, *query.StartedAfter)
+		nextPlaceholder++
+	}
+
+	if query.StartedBefore != nil {
+		where = append(where, "started_at <= $"+strconv.Itoa(nextPlaceholder))
+		args = append(args, *query.StartedBefore)
+		nextPlaceholder++
+	}
+
+	if len(where) > 0 {
+		q += "WHERE " + strings.Join(where, " AND ") + "\n"
+	}
+
+	switch query.Sort {
+	case listEventsSortUpdatedAtAsc:
+		q += "ORDER BY updated_at ASC, id ASC\n"
+	default:
+		q += "ORDER BY updated_at DESC, id ASC\n"
+	}
+
+	if query.Limit != nil {
+		q += "LIMIT $" + strconv.Itoa(nextPlaceholder) + " OFFSET $" + strconv.Itoa(nextPlaceholder+1) + ";"
+		args = append(args, *query.Limit+1, query.Cursor)
+	} else {
+		q += ";"
+	}
+
+	rows, err := r.db.QueryContext(ctx, q, args...)
+	if err != nil {
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "42P01" {
+			return eventsListResponse{
+				Items:      []Event{},
+				NextCursor: "",
+			}, nil
+		}
+		if errors.As(err, &pqErr) && pqErr.Code == "42703" {
+			return r.listEventsWithoutGeometryColumns(ctx, query)
+		}
+		return eventsListResponse{}, fmt.Errorf("query ingested events: %w", err)
+	}
+	defer rows.Close()
+
+	events := make([]Event, 0)
+	for rows.Next() {
+		var (
+			ev        Event
+			startedAt time.Time
+			updatedAt time.Time
+			longitude sql.NullFloat64
+			latitude  sql.NullFloat64
+		)
+
+		if err := rows.Scan(
+			&ev.ID,
+			&ev.Type,
+			&ev.Title,
+			&ev.Status,
+			&ev.Severity,
+			&startedAt,
+			&updatedAt,
+			&longitude,
+			&latitude,
+		); err != nil {
+			return eventsListResponse{}, fmt.Errorf("scan ingested event: %w", err)
+		}
+
+		ev.StartedAt = startedAt.UTC().Format(time.RFC3339)
+		ev.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+		applyEventGeometry(&ev, longitude, latitude)
+		events = append(events, ev)
+	}
+
+	if err := rows.Err(); err != nil {
+		return eventsListResponse{}, fmt.Errorf("iterate ingested events: %w", err)
+	}
+
+	nextCursor := ""
+	if query.Limit != nil && len(events) > *query.Limit {
+		events = events[:*query.Limit]
+		nextCursor = strconv.Itoa(query.Cursor + *query.Limit)
+	}
+
+	return eventsListResponse{
+		Items:      events,
+		NextCursor: nextCursor,
+	}, nil
+}
+
+func (r *postgresEventsReader) listEventsWithoutGeometryColumns(ctx context.Context, query listEventsQuery) (eventsListResponse, error) {
+	q := `
 SELECT id, type, title, status, severity, started_at, updated_at
 FROM ingested_events
 `
@@ -166,7 +279,7 @@ FROM ingested_events
 				NextCursor: "",
 			}, nil
 		}
-		return eventsListResponse{}, fmt.Errorf("query ingested events: %w", err)
+		return eventsListResponse{}, fmt.Errorf("query ingested events without geometry columns: %w", err)
 	}
 	defer rows.Close()
 
@@ -187,7 +300,7 @@ FROM ingested_events
 			&startedAt,
 			&updatedAt,
 		); err != nil {
-			return eventsListResponse{}, fmt.Errorf("scan ingested event: %w", err)
+			return eventsListResponse{}, fmt.Errorf("scan ingested event without geometry columns: %w", err)
 		}
 
 		ev.StartedAt = startedAt.UTC().Format(time.RFC3339)
@@ -196,7 +309,7 @@ FROM ingested_events
 	}
 
 	if err := rows.Err(); err != nil {
-		return eventsListResponse{}, fmt.Errorf("iterate ingested events: %w", err)
+		return eventsListResponse{}, fmt.Errorf("iterate ingested events without geometry columns: %w", err)
 	}
 
 	nextCursor := ""
@@ -212,6 +325,56 @@ FROM ingested_events
 }
 
 func (r *postgresEventsReader) GetEventByID(ctx context.Context, id string) (Event, error) {
+	const q = `
+SELECT id, type, title, status, severity, started_at, updated_at, longitude, latitude
+FROM ingested_events
+WHERE id = $1
+LIMIT 1;
+`
+
+	var (
+		ev        Event
+		startedAt time.Time
+		updatedAt time.Time
+		longitude sql.NullFloat64
+		latitude  sql.NullFloat64
+	)
+
+	err := r.db.QueryRowContext(ctx, q, id).Scan(
+		&ev.ID,
+		&ev.Type,
+		&ev.Title,
+		&ev.Status,
+		&ev.Severity,
+		&startedAt,
+		&updatedAt,
+		&longitude,
+		&latitude,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Event{}, errEventNotFound
+		}
+
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "42P01" {
+			return Event{}, errEventNotFound
+		}
+		if errors.As(err, &pqErr) && pqErr.Code == "42703" {
+			return r.getEventByIDWithoutGeometryColumns(ctx, id)
+		}
+
+		return Event{}, fmt.Errorf("query ingested event detail: %w", err)
+	}
+
+	ev.StartedAt = startedAt.UTC().Format(time.RFC3339)
+	ev.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+	applyEventGeometry(&ev, longitude, latitude)
+
+	return ev, nil
+}
+
+func (r *postgresEventsReader) getEventByIDWithoutGeometryColumns(ctx context.Context, id string) (Event, error) {
 	const q = `
 SELECT id, type, title, status, severity, started_at, updated_at
 FROM ingested_events
@@ -244,7 +407,7 @@ LIMIT 1;
 			return Event{}, errEventNotFound
 		}
 
-		return Event{}, fmt.Errorf("query ingested event detail: %w", err)
+		return Event{}, fmt.Errorf("query ingested event detail without geometry columns: %w", err)
 	}
 
 	ev.StartedAt = startedAt.UTC().Format(time.RFC3339)
@@ -516,4 +679,15 @@ func parseListEventsQuery(values url.Values) (listEventsQuery, error) {
 	}
 
 	return query, nil
+}
+
+func applyEventGeometry(event *Event, longitude sql.NullFloat64, latitude sql.NullFloat64) {
+	if !longitude.Valid || !latitude.Valid {
+		return
+	}
+
+	event.Geometry = &EventGeometry{
+		Longitude: longitude.Float64,
+		Latitude:  latitude.Float64,
+	}
 }

@@ -14,6 +14,8 @@ type NormalizedEvent struct {
 	Severity  int
 	StartedAt string
 	UpdatedAt string
+	Longitude *float64
+	Latitude  *float64
 }
 
 func NormalizeFeatures(features []Feature) []NormalizedEvent {
@@ -25,6 +27,8 @@ func NormalizeFeatures(features []Feature) []NormalizedEvent {
 }
 
 func NormalizeFeature(feature Feature) NormalizedEvent {
+	longitude, latitude := normalizeCoordinates(feature.Geometry.Coordinates)
+
 	return NormalizedEvent{
 		ID:        fmt.Sprintf("usgs:%s", feature.ID),
 		Type:      "earthquake",
@@ -33,7 +37,20 @@ func NormalizeFeature(feature Feature) NormalizedEvent {
 		Severity:  mapSeverity(feature.Properties.Mag),
 		StartedAt: formatUnixMilli(feature.Properties.Time),
 		UpdatedAt: formatUnixMilli(feature.Properties.Updated),
+		Longitude: longitude,
+		Latitude:  latitude,
 	}
+}
+
+func normalizeCoordinates(coords []float64) (*float64, *float64) {
+	if len(coords) < 2 {
+		return nil, nil
+	}
+
+	lon := coords[0]
+	lat := coords[1]
+
+	return &lon, &lat
 }
 
 func mapStatus(sourceStatus string) string {

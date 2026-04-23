@@ -47,11 +47,17 @@ func TestEnsureSchemaSuccess(t *testing.T) {
 		t.Fatalf("EnsureSchema returned error: %v", err)
 	}
 
-	if len(exec.calls) != 1 {
-		t.Fatalf("exec call count = %d, want 1", len(exec.calls))
+	if len(exec.calls) != 3 {
+		t.Fatalf("exec call count = %d, want 3", len(exec.calls))
 	}
 	if !strings.Contains(exec.calls[0].query, "CREATE TABLE IF NOT EXISTS ingested_events") {
 		t.Fatalf("schema query mismatch: %q", exec.calls[0].query)
+	}
+	if !strings.Contains(exec.calls[1].query, "ADD COLUMN IF NOT EXISTS longitude") {
+		t.Fatalf("longitude migration query mismatch: %q", exec.calls[1].query)
+	}
+	if !strings.Contains(exec.calls[2].query, "ADD COLUMN IF NOT EXISTS latitude") {
+		t.Fatalf("latitude migration query mismatch: %q", exec.calls[2].query)
 	}
 }
 
