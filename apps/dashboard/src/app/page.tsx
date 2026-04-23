@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Event, EventFilters } from "../types";
-import { fetchEvents } from "../lib/api";
+import { fetchEvents, fetchEventDetail } from "../lib/api";
 import maplibregl from "maplibre-gl";
 
 export default function DashboardPage() {
@@ -16,13 +16,15 @@ export default function DashboardPage() {
   });
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isDetailLoading, setIsDetailLoading] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isMapReady, setIsMapReady] = useState(false);
 
   // --- Refs ---
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<maplibregl.Map | null>(null);
-  const markers = useRef<maplibregl.Marker[]>([]);
+  const markers = useRef<Map<string, maplibregl.Marker>>(new Map());
 
   // --- Actions ---
   const loadEvents = useCallback(async () => {
@@ -42,6 +44,37 @@ export default function DashboardPage() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  // Load detail when selection changes
+  useEffect(() => {
+    if (!selectedEventId) {
+      setSelectedEvent(null);
+      return;
+    }
+
+    const loadDetail = async () => {
+      setIsDetailLoading(true);
+      try {
+        const detail = await fetchEventDetail(selectedEventId);
+        setSelectedEvent(detail);
+        
+        // Focus map if geometry is available
+        if (map.current && detail.geometry) {
+          map.current.easeTo({
+            center: [detail.geometry.longitude, detail.geometry.latitude],
+            zoom: 6,
+            duration: 1500
+          });
+        }
+      } catch (err) {
+        console.error("Failed to load event detail:", err);
+      } finally {
+        setIsDetailLoading(false);
+      }
+    };
+
+    loadDetail();
+  }, [selectedEventId]);
 
   // --- Map Initialization ---
   useEffect(() => {
@@ -94,7 +127,7 @@ export default function DashboardPage() {
     console.log("Syncing markers...", events.length);
     // Clear existing markers
     markers.current.forEach((m) => m.remove());
-    markers.current = [];
+    markers.current.clear();
 
     const bounds = new maplibregl.LngLatBounds();
     let hasGeometry = false;
@@ -107,32 +140,36 @@ export default function DashboardPage() {
       const coords: [number, number] = [event.geometry.longitude, event.geometry.latitude];
       bounds.extend(coords);
 
+      const isSelected = selectedEventId === event.id;
+
       const el = document.createElement("div");
       el.className = "group relative cursor-pointer";
 
       const inner = document.createElement("div");
-      inner.className = `h-2.5 w-2.5 rounded-full border border-white/20 transition-transform duration-200 group-hover:scale-125 ${getSeverityColor(event.severity)}`;
+      inner.className = `rounded-full border border-white/20 transition-all duration-300 group-hover:scale-125 ${getSeverityColor(event.severity)} ${isSelected ? 'h-4 w-4 shadow-[0_0_12px_rgba(255,255,255,0.4)] ring-2 ring-white/30' : 'h-2.5 w-2.5'}`;
       el.appendChild(inner);
 
       const marker = new maplibregl.Marker({ element: el })
         .setLngLat(coords)
         .addTo(currentMap);
 
-      el.addEventListener("click", () => {
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
         setSelectedEventId(event.id);
       });
 
-      markers.current.push(marker);
+      markers.current.set(event.id, marker);
     });
 
-    if (hasGeometry) {
+    // Only fit bounds on initial multi-event load if no selection is active
+    if (hasGeometry && !selectedEventId && events.length > 0) {
       currentMap.fitBounds(bounds, {
         padding: 64,
         maxZoom: 10,
         duration: 2000,
       });
     }
-  }, [events, isMapReady]);
+  }, [events, isMapReady, selectedEventId]);
 
   const toggleSort = () => {
     setFilters((prev) => ({
@@ -346,21 +383,35 @@ export default function DashboardPage() {
           RIGHT PANEL: EVENT INTELLIGENCE
         */}
         <aside className="flex w-96 shrink-0 flex-col border-l border-zinc-800 bg-zinc-900/20 backdrop-blur-md">
-          <div className="border-b border-zinc-800/50 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-zinc-800/50 px-4 py-3">
             <h2 className="text-[10px] font-bold uppercase tracking-[0.2em] text-zinc-500">
               Event Intelligence
             </h2>
+            {selectedEventId && (
+              <button 
+                onClick={() => setSelectedEventId(null)}
+                className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-400 transition-colors"
+              >
+                Clear
+              </button>
+            )}
           </div>
 
           <div className="flex-1 overflow-y-auto p-6">
-            {selectedEventId ? (
+            {isDetailLoading ? (
+              <div className="flex h-full items-center justify-center">
+                <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-zinc-700 animate-pulse">
+                  Analyzing Entity...
+                </span>
+              </div>
+            ) : selectedEvent ? (
               <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-2 duration-300">
                 <div>
                   <div className="mb-1 text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">
-                    ID: {selectedEventId}
+                    ID: {selectedEvent.id}
                   </div>
                   <h2 className="text-lg font-medium leading-tight text-white">
-                    {events.find((e) => e.id === selectedEventId)?.title}
+                    {selectedEvent.title}
                   </h2>
                 </div>
 
@@ -370,7 +421,7 @@ export default function DashboardPage() {
                       Status
                     </span>
                     <span className="text-xs text-zinc-400 capitalize">
-                      {events.find((e) => e.id === selectedEventId)?.status}
+                      {selectedEvent.status}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
@@ -378,8 +429,23 @@ export default function DashboardPage() {
                       Severity
                     </span>
                     <span className="text-xs text-zinc-400">
-                      Level{" "}
-                      {events.find((e) => e.id === selectedEventId)?.severity}
+                      Level {selectedEvent.severity}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
+                      Type
+                    </span>
+                    <span className="text-xs text-zinc-400 capitalize">
+                      {selectedEvent.type}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
+                      Initial Signal
+                    </span>
+                    <span className="text-xs text-zinc-400">
+                      {new Date(selectedEvent.started_at).toLocaleTimeString()}
                     </span>
                   </div>
                 </div>
@@ -387,10 +453,16 @@ export default function DashboardPage() {
                 <div className="h-px w-full bg-zinc-800/50" />
 
                 <div className="flex flex-col gap-4">
-                  <p className="text-[10px] leading-relaxed text-zinc-500 uppercase tracking-wider">
-                    Further intelligence awaiting integration. Full metadata
-                    wiring scheduled for Step 4.
-                  </p>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
+                      Position
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      {selectedEvent.geometry 
+                        ? `${selectedEvent.geometry.latitude.toFixed(4)}°N, ${selectedEvent.geometry.longitude.toFixed(4)}°E`
+                        : "Geospatial data unavailable"}
+                    </span>
+                  </div>
                 </div>
               </div>
             ) : (

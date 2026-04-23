@@ -12,7 +12,7 @@ Phase 5 - First Dashboard
 
 Current active step:
 
-- Step 4 - Event selection and right-side detail panel
+- Step 5 - Basic visual polish for loading/empty/error states
 
 ---
 
@@ -104,14 +104,26 @@ Not added in Step 3:
 
 ### Step 4 - Event selection and right-side detail panel
 
-Status: Active
+Status: Completed
 
-Delivered when:
+Delivered:
 
-- selecting an event from feed/map drives detail panel updates
-- map can focus/center on selected event when geometry is available
+- feed item click selects the event
+- marker click selects the event
+- right-side Event Intelligence panel shows real selected-event data
+- selected state is synchronized across feed, map, and detail panel
+- map can focus/ease toward the selected event
+- clear/reset selection behavior exists where implemented
+
+Not added in Step 4:
+
+- country interaction logic
+- clustering
+- backend contract redesign
 
 ### Step 5 - Basic visual polish for loading/empty/error states
+
+Status: Active
 
 Delivered when:
 
