@@ -71,7 +71,7 @@ Phase 2 remains active.
 
 ## Phase 3 — First Ingestion Pipeline
 
-**Status:** Upcoming
+**Status:** Completed
 
 **Goal:**
 
