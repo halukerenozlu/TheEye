@@ -12,7 +12,7 @@ Phase 3 - First Ingestion Pipeline
 
 Current active step:
 
-- Step 1 - Source contract and ingestion shape definition
+- Step 3 - Normalize source records
 
 ---
 
@@ -81,12 +81,26 @@ Step 1 idempotency baseline:
 
 ### Step 2 - Source fetch client
 
-Delivered when:
+Status: Completed
 
-- source fetch succeeds reliably
-- basic failure handling exists
+Delivered:
+
+- minimal USGS fetch client added
+- FeatureCollection-style source payload decoding added
+- non-200 upstream handling added
+- malformed JSON handling added
+- minimal backend tests added
+
+Not added in Step 2:
+
+- normalization into final Event model
+- database writes
+- API contract changes
+- scheduler logic
 
 ### Step 3 - Normalize source records
+
+Status: Active
 
 Delivered when:
 

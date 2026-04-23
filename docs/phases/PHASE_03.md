@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 1 - Source contract and ingestion shape definition
+- Step 3 - Normalize source records
 
 ---
 
@@ -61,6 +61,27 @@ Idempotency target for writes:
 Step 1 guardrail:
 
 - keep the current Event direction; do not expand API response fields in Step 1
+
+---
+
+## Step 2 Completion - Source Fetch Client
+
+Status: Completed
+
+Delivered:
+
+- minimal USGS fetch client added
+- FeatureCollection-style source payload decoding added
+- non-200 upstream handling added
+- malformed JSON handling added
+- minimal backend tests added
+
+Not added in Step 2:
+
+- normalization into final Event model
+- database writes
+- API contract changes
+- scheduler logic
 
 ---
 
