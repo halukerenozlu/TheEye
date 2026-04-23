@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 4 - Store normalized events
+- Step 5 - Expose real data through `/v1/events`
 
 ---
 
@@ -105,6 +105,31 @@ Not added in Step 3:
 - API behavior changes
 - Redis/SSE logic
 - scheduler logic
+- Event model expansion
+
+---
+
+## Step 4 Completion - Store Normalized Events
+
+Status: Completed
+
+Delivered:
+
+- minimal persistence layer added for normalized USGS records
+- practical duplicate-safe behavior added
+- batch-level deduplication before writes added
+- DB-level upsert / conflict-safe write behavior added using `(source_name, source_event_id)`
+- minimal schema creation path added only because migration infrastructure is not yet present
+- minimal backend tests added for schema creation, successful upsert, duplicate-safe behavior, invalid input, and DB error handling
+
+Not added in Step 4:
+
+- `/v1/events` behavior changes
+- DB read/query path
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
 - Event model expansion
 
 ---
