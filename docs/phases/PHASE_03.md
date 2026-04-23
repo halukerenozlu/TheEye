@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 3 - Normalize source records
+- Step 4 - Store normalized events
 
 ---
 
@@ -82,6 +82,30 @@ Not added in Step 2:
 - database writes
 - API contract changes
 - scheduler logic
+
+---
+
+## Step 3 Completion - Normalize Source Records
+
+Status: Completed
+
+Delivered:
+
+- deterministic normalization layer added
+- id baseline fixed as `usgs:{source_id}`
+- type/title mapping added
+- status mapping added
+- UTC RFC3339 time conversion added
+- deterministic severity mapping added
+- minimal backend tests added
+
+Not added in Step 3:
+
+- database writes
+- API behavior changes
+- Redis/SSE logic
+- scheduler logic
+- Event model expansion
 
 ---
 

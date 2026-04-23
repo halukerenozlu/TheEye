@@ -12,7 +12,7 @@ Phase 3 - First Ingestion Pipeline
 
 Current active step:
 
-- Step 3 - Normalize source records
+- Step 4 - Store normalized events
 
 ---
 
@@ -100,13 +100,29 @@ Not added in Step 2:
 
 ### Step 3 - Normalize source records
 
-Status: Active
+Status: Completed
 
-Delivered when:
+Delivered:
 
-- source records map deterministically to the target shape
+- deterministic normalization layer added
+- id baseline fixed as `usgs:{source_id}`
+- type/title mapping added
+- status mapping added
+- UTC RFC3339 time conversion added
+- deterministic severity mapping added
+- minimal backend tests added
+
+Not added in Step 3:
+
+- database writes
+- API behavior changes
+- Redis/SSE logic
+- scheduler logic
+- Event model expansion
 
 ### Step 4 - Store normalized events
+
+Status: Active
 
 Delivered when:
 
