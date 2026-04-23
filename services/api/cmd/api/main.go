@@ -56,14 +56,21 @@ type errorResponse struct {
 	Message string `json:"message"`
 }
 
+var errEventNotFound = errors.New("event not found")
+
 type eventsReader interface {
 	ListEvents(ctx context.Context) ([]Event, error)
+	GetEventByID(ctx context.Context, id string) (Event, error)
 }
 
 type emptyEventsReader struct{}
 
 func (emptyEventsReader) ListEvents(_ context.Context) ([]Event, error) {
 	return []Event{}, nil
+}
+
+func (emptyEventsReader) GetEventByID(_ context.Context, _ string) (Event, error) {
+	return Event{}, errEventNotFound
 }
 
 type postgresEventsReader struct {
@@ -121,6 +128,48 @@ ORDER BY updated_at DESC, id ASC;
 	}
 
 	return events, nil
+}
+
+func (r *postgresEventsReader) GetEventByID(ctx context.Context, id string) (Event, error) {
+	const q = `
+SELECT id, type, title, status, severity, started_at, updated_at
+FROM ingested_events
+WHERE id = $1
+LIMIT 1;
+`
+
+	var (
+		ev        Event
+		startedAt time.Time
+		updatedAt time.Time
+	)
+
+	err := r.db.QueryRowContext(ctx, q, id).Scan(
+		&ev.ID,
+		&ev.Type,
+		&ev.Title,
+		&ev.Status,
+		&ev.Severity,
+		&startedAt,
+		&updatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Event{}, errEventNotFound
+		}
+
+		var pqErr *pq.Error
+		if errors.As(err, &pqErr) && pqErr.Code == "42P01" {
+			return Event{}, errEventNotFound
+		}
+
+		return Event{}, fmt.Errorf("query ingested event detail: %w", err)
+	}
+
+	ev.StartedAt = startedAt.UTC().Format(time.RFC3339)
+	ev.UpdatedAt = updatedAt.UTC().Format(time.RFC3339)
+
+	return ev, nil
 }
 
 func main() {
@@ -239,8 +288,21 @@ func newRouterWithEventsReader(cfg config, reader eventsReader) chi.Router {
 		})
 	})
 
-	r.Get("/v1/events/{id}", func(w http.ResponseWriter, _ *http.Request) {
-		writeError(w, http.StatusNotFound, "event_not_found", "event not found")
+	r.Get("/v1/events/{id}", func(w http.ResponseWriter, req *http.Request) {
+		id := chi.URLParam(req, "id")
+
+		event, err := reader.GetEventByID(req.Context(), id)
+		if err != nil {
+			if errors.Is(err, errEventNotFound) {
+				writeError(w, http.StatusNotFound, "event_not_found", "event not found")
+				return
+			}
+
+			writeError(w, http.StatusInternalServerError, "event_read_failed", "failed to read event")
+			return
+		}
+
+		writeJSON(w, http.StatusOK, event)
 	})
 
 	return r

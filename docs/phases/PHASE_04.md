@@ -12,7 +12,29 @@ Current sprint:
 
 Current active step:
 
-- Step 1 - Real event detail endpoint
+- Step 2 - Events list query baseline cleanup
+
+---
+
+## Step 1 Completion - Real Event Detail Endpoint
+
+Status: Completed
+
+Delivered:
+
+- `GET /v1/events/{id}` now returns real stored event data when found
+- unknown id keeps the consistent JSON `404` shape
+- existing `GET /v1/events` behavior remains unchanged
+- minimal backend tests were added/updated for found and not-found behavior
+
+Not added in Step 1:
+
+- filtering/sorting/pagination changes
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
+- Event model redesign
 
 ---
 

@@ -12,7 +12,7 @@ Phase 4 - API Layer
 
 Current active step:
 
-- Step 1 - Real event detail endpoint
+- Step 2 - Events list query baseline cleanup
 
 ---
 
@@ -45,15 +45,27 @@ Deliver the first stable API-layer slice on top of stored event data, starting w
 
 ### Step 1 - Real event detail endpoint
 
-Status: Active
+Status: Completed
 
-Delivered when:
+Delivered:
 
-- `GET /v1/events/{id}` returns real stored event data
-- not-found behavior remains explicit and consistent
-- response shape stays compatible with current API direction
+- `GET /v1/events/{id}` now returns real stored event data when found
+- unknown id keeps the consistent JSON `404` shape
+- existing `GET /v1/events` behavior remains unchanged
+- minimal backend tests were added/updated for found and not-found behavior
+
+Not added in Step 1:
+
+- filtering/sorting/pagination changes
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
+- Event model redesign
 
 ### Step 2 - Events list query baseline cleanup
+
+Status: Active
 
 Delivered when:
 

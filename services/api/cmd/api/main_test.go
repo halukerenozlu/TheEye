@@ -21,10 +21,26 @@ func testConfig() config {
 type fakeEventsReader struct {
 	items []Event
 	err   error
+
+	eventByID map[string]Event
+	detailErr error
 }
 
 func (f fakeEventsReader) ListEvents(_ context.Context) ([]Event, error) {
 	return f.items, f.err
+}
+
+func (f fakeEventsReader) GetEventByID(_ context.Context, id string) (Event, error) {
+	if f.detailErr != nil {
+		return Event{}, f.detailErr
+	}
+
+	ev, ok := f.eventByID[id]
+	if !ok {
+		return Event{}, errEventNotFound
+	}
+
+	return ev, nil
 }
 
 func TestWriteError(t *testing.T) {
@@ -50,8 +66,8 @@ func TestWriteError(t *testing.T) {
 	}
 }
 
-func TestEventsDetailPlaceholderErrorShape(t *testing.T) {
-	r := newRouter(testConfig())
+func TestEventsDetailNotFoundErrorShape(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), fakeEventsReader{})
 	req := httptest.NewRequest(http.MethodGet, "/v1/events/abc", nil)
 	rec := httptest.NewRecorder()
 
@@ -72,6 +88,42 @@ func TestEventsDetailPlaceholderErrorShape(t *testing.T) {
 	}
 	if got != want {
 		t.Fatalf("body = %+v, want %+v", got, want)
+	}
+}
+
+func TestEventsDetailReturnsStoredData(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), fakeEventsReader{
+		eventByID: map[string]Event{
+			"usgs:abc123": {
+				ID:        "usgs:abc123",
+				Type:      "earthquake",
+				Title:     "M 3.4 - Test",
+				Status:    "confirmed",
+				Severity:  2,
+				StartedAt: "2023-11-14T22:13:20Z",
+				UpdatedAt: "2023-11-14T22:13:21Z",
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events/usgs:abc123", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got Event
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal event detail response: %v", err)
+	}
+
+	if got.ID != "usgs:abc123" {
+		t.Fatalf("id = %q, want %q", got.ID, "usgs:abc123")
+	}
+	if got.Type != "earthquake" {
+		t.Fatalf("type = %q, want %q", got.Type, "earthquake")
 	}
 }
 
