@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"sort"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -26,39 +28,85 @@ type fakeEventsReader struct {
 	eventByID map[string]Event
 	detailErr error
 
-	lastListFilters listEventsFilters
+	lastListQuery listEventsQuery
 }
 
-func (f *fakeEventsReader) ListEvents(_ context.Context, filters listEventsFilters) ([]Event, error) {
-	f.lastListFilters = filters
+func (f *fakeEventsReader) ListEvents(_ context.Context, query listEventsQuery) (eventsListResponse, error) {
+	f.lastListQuery = query
 
 	if f.err != nil {
-		return nil, f.err
+		return eventsListResponse{}, f.err
 	}
 
-	items := make([]Event, 0, len(f.items))
+	filtered := make([]Event, 0, len(f.items))
 	for _, item := range f.items {
-		if filters.Type != "" && item.Type != filters.Type {
+		if query.Type != "" && item.Type != query.Type {
 			continue
 		}
 
 		startedAt, err := time.Parse(time.RFC3339, item.StartedAt)
 		if err != nil {
-			return nil, err
+			return eventsListResponse{}, err
 		}
 
-		if filters.StartedAfter != nil && startedAt.Before(*filters.StartedAfter) {
+		if query.StartedAfter != nil && startedAt.Before(*query.StartedAfter) {
 			continue
 		}
 
-		if filters.StartedBefore != nil && startedAt.After(*filters.StartedBefore) {
+		if query.StartedBefore != nil && startedAt.After(*query.StartedBefore) {
 			continue
 		}
 
-		items = append(items, item)
+		filtered = append(filtered, item)
 	}
 
-	return items, nil
+	sort.Slice(filtered, func(i, j int) bool {
+		leftUpdatedAt, err := time.Parse(time.RFC3339, filtered[i].UpdatedAt)
+		if err != nil {
+			return false
+		}
+		rightUpdatedAt, err := time.Parse(time.RFC3339, filtered[j].UpdatedAt)
+		if err != nil {
+			return false
+		}
+
+		if leftUpdatedAt.Equal(rightUpdatedAt) {
+			return filtered[i].ID < filtered[j].ID
+		}
+
+		if query.Sort == listEventsSortUpdatedAtAsc {
+			return leftUpdatedAt.Before(rightUpdatedAt)
+		}
+
+		return leftUpdatedAt.After(rightUpdatedAt)
+	})
+
+	if query.Limit == nil {
+		return eventsListResponse{
+			Items:      filtered,
+			NextCursor: "",
+		}, nil
+	}
+
+	if query.Cursor >= len(filtered) {
+		return eventsListResponse{
+			Items:      []Event{},
+			NextCursor: "",
+		}, nil
+	}
+
+	end := query.Cursor + *query.Limit
+	nextCursor := ""
+	if end < len(filtered) {
+		nextCursor = strconv.Itoa(end)
+	} else {
+		end = len(filtered)
+	}
+
+	return eventsListResponse{
+		Items:      filtered[query.Cursor:end],
+		NextCursor: nextCursor,
+	}, nil
 }
 
 func (f fakeEventsReader) GetEventByID(_ context.Context, id string) (Event, error) {
@@ -317,8 +365,8 @@ func TestEventsListFilteringByType(t *testing.T) {
 	if got.Items[0].Type != "earthquake" {
 		t.Fatalf("items[0].type = %q, want %q", got.Items[0].Type, "earthquake")
 	}
-	if reader.lastListFilters.Type != "earthquake" {
-		t.Fatalf("lastListFilters.Type = %q, want %q", reader.lastListFilters.Type, "earthquake")
+	if reader.lastListQuery.Type != "earthquake" {
+		t.Fatalf("lastListQuery.Type = %q, want %q", reader.lastListQuery.Type, "earthquake")
 	}
 }
 
@@ -453,5 +501,212 @@ func TestEventsListInvalidStartedAtRange(t *testing.T) {
 	}
 	if got.Message != "invalid query parameter: started_after must be before or equal to started_before" {
 		t.Fatalf("message = %q, want %q", got.Message, "invalid query parameter: started_after must be before or equal to started_before")
+	}
+}
+
+func TestEventsListSortingUpdatedAtAsc(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), &fakeEventsReader{
+		items: []Event{
+			{
+				ID:        "usgs:2",
+				Type:      "earthquake",
+				Title:     "Newer",
+				Status:    "confirmed",
+				Severity:  2,
+				StartedAt: "2023-11-14T22:13:30Z",
+				UpdatedAt: "2023-11-14T22:13:30Z",
+			},
+			{
+				ID:        "usgs:1",
+				Type:      "earthquake",
+				Title:     "Older",
+				Status:    "confirmed",
+				Severity:  1,
+				StartedAt: "2023-11-14T22:13:20Z",
+				UpdatedAt: "2023-11-14T22:13:20Z",
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events?sort=updated_at_asc", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got eventsListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal events list response: %v", err)
+	}
+
+	if len(got.Items) != 2 {
+		t.Fatalf("items length = %d, want 2", len(got.Items))
+	}
+	if got.Items[0].ID != "usgs:1" {
+		t.Fatalf("items[0].id = %q, want %q", got.Items[0].ID, "usgs:1")
+	}
+	if got.Items[1].ID != "usgs:2" {
+		t.Fatalf("items[1].id = %q, want %q", got.Items[1].ID, "usgs:2")
+	}
+}
+
+func TestEventsListInvalidSortValue(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), &fakeEventsReader{})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events?sort=severity_desc", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+
+	var got errorResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal error response: %v", err)
+	}
+
+	if got.Error != "bad_request" {
+		t.Fatalf("error code = %q, want %q", got.Error, "bad_request")
+	}
+	if got.Message != "invalid query parameter: sort must be one of updated_at_desc,updated_at_asc" {
+		t.Fatalf("message = %q, want %q", got.Message, "invalid query parameter: sort must be one of updated_at_desc,updated_at_asc")
+	}
+}
+
+func TestEventsListPaginationLimitAndNextCursor(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), &fakeEventsReader{
+		items: []Event{
+			{
+				ID:        "usgs:3",
+				Type:      "earthquake",
+				Title:     "Third",
+				Status:    "confirmed",
+				Severity:  3,
+				StartedAt: "2023-11-14T22:13:40Z",
+				UpdatedAt: "2023-11-14T22:13:40Z",
+			},
+			{
+				ID:        "usgs:2",
+				Type:      "earthquake",
+				Title:     "Second",
+				Status:    "confirmed",
+				Severity:  2,
+				StartedAt: "2023-11-14T22:13:30Z",
+				UpdatedAt: "2023-11-14T22:13:30Z",
+			},
+			{
+				ID:        "usgs:1",
+				Type:      "earthquake",
+				Title:     "First",
+				Status:    "confirmed",
+				Severity:  1,
+				StartedAt: "2023-11-14T22:13:20Z",
+				UpdatedAt: "2023-11-14T22:13:20Z",
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events?limit=2", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got eventsListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal events list response: %v", err)
+	}
+
+	if len(got.Items) != 2 {
+		t.Fatalf("items length = %d, want 2", len(got.Items))
+	}
+	if got.NextCursor != "2" {
+		t.Fatalf("next_cursor = %q, want %q", got.NextCursor, "2")
+	}
+}
+
+func TestEventsListPaginationWithCursor(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), &fakeEventsReader{
+		items: []Event{
+			{
+				ID:        "usgs:3",
+				Type:      "earthquake",
+				Title:     "Third",
+				Status:    "confirmed",
+				Severity:  3,
+				StartedAt: "2023-11-14T22:13:40Z",
+				UpdatedAt: "2023-11-14T22:13:40Z",
+			},
+			{
+				ID:        "usgs:2",
+				Type:      "earthquake",
+				Title:     "Second",
+				Status:    "confirmed",
+				Severity:  2,
+				StartedAt: "2023-11-14T22:13:30Z",
+				UpdatedAt: "2023-11-14T22:13:30Z",
+			},
+			{
+				ID:        "usgs:1",
+				Type:      "earthquake",
+				Title:     "First",
+				Status:    "confirmed",
+				Severity:  1,
+				StartedAt: "2023-11-14T22:13:20Z",
+				UpdatedAt: "2023-11-14T22:13:20Z",
+			},
+		},
+	})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events?limit=2&cursor=2", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+
+	var got eventsListResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal events list response: %v", err)
+	}
+
+	if len(got.Items) != 1 {
+		t.Fatalf("items length = %d, want 1", len(got.Items))
+	}
+	if got.Items[0].ID != "usgs:1" {
+		t.Fatalf("items[0].id = %q, want %q", got.Items[0].ID, "usgs:1")
+	}
+	if got.NextCursor != "" {
+		t.Fatalf("next_cursor = %q, want empty string", got.NextCursor)
+	}
+}
+
+func TestEventsListInvalidCursorWithoutLimit(t *testing.T) {
+	r := newRouterWithEventsReader(testConfig(), &fakeEventsReader{})
+	req := httptest.NewRequest(http.MethodGet, "/v1/events?cursor=2", nil)
+	rec := httptest.NewRecorder()
+
+	r.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusBadRequest)
+	}
+
+	var got errorResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("unmarshal error response: %v", err)
+	}
+
+	if got.Error != "bad_request" {
+		t.Fatalf("error code = %q, want %q", got.Error, "bad_request")
+	}
+	if got.Message != "invalid query parameter: cursor requires limit" {
+		t.Fatalf("message = %q, want %q", got.Message, "invalid query parameter: cursor requires limit")
 	}
 }

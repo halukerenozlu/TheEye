@@ -62,14 +62,17 @@ type errorResponse struct {
 var errEventNotFound = errors.New("event not found")
 
 type eventsReader interface {
-	ListEvents(ctx context.Context, filters listEventsFilters) ([]Event, error)
+	ListEvents(ctx context.Context, query listEventsQuery) (eventsListResponse, error)
 	GetEventByID(ctx context.Context, id string) (Event, error)
 }
 
 type emptyEventsReader struct{}
 
-func (emptyEventsReader) ListEvents(_ context.Context, _ listEventsFilters) ([]Event, error) {
-	return []Event{}, nil
+func (emptyEventsReader) ListEvents(_ context.Context, _ listEventsQuery) (eventsListResponse, error) {
+	return eventsListResponse{
+		Items:      []Event{},
+		NextCursor: "",
+	}, nil
 }
 
 func (emptyEventsReader) GetEventByID(_ context.Context, _ string) (Event, error) {
@@ -80,46 +83,59 @@ type postgresEventsReader struct {
 	db *sql.DB
 }
 
-type listEventsFilters struct {
+type listEventsSort string
+
+const (
+	listEventsSortUpdatedAtDesc listEventsSort = "updated_at_desc"
+	listEventsSortUpdatedAtAsc  listEventsSort = "updated_at_asc"
+)
+
+type listEventsQuery struct {
 	Type          string
 	StartedAfter  *time.Time
 	StartedBefore *time.Time
+	Sort          listEventsSort
+	Limit         *int
+	Cursor        int
 }
 
 var supportedEventsListQueryParams = map[string]struct{}{
 	"type":           {},
 	"started_after":  {},
 	"started_before": {},
+	"sort":           {},
+	"limit":          {},
+	"cursor":         {},
 }
 
 func newPostgresEventsReader(db *sql.DB) *postgresEventsReader {
 	return &postgresEventsReader{db: db}
 }
 
-func (r *postgresEventsReader) ListEvents(ctx context.Context, filters listEventsFilters) ([]Event, error) {
+func (r *postgresEventsReader) ListEvents(ctx context.Context, query listEventsQuery) (eventsListResponse, error) {
 	q := `
 SELECT id, type, title, status, severity, started_at, updated_at
 FROM ingested_events
 `
-	args := make([]any, 0, 3)
+	args := make([]any, 0, 5)
 	where := make([]string, 0, 3)
 	nextPlaceholder := 1
 
-	if filters.Type != "" {
+	if query.Type != "" {
 		where = append(where, "type = $"+strconv.Itoa(nextPlaceholder))
-		args = append(args, filters.Type)
+		args = append(args, query.Type)
 		nextPlaceholder++
 	}
 
-	if filters.StartedAfter != nil {
+	if query.StartedAfter != nil {
 		where = append(where, "started_at >= $"+strconv.Itoa(nextPlaceholder))
-		args = append(args, *filters.StartedAfter)
+		args = append(args, *query.StartedAfter)
 		nextPlaceholder++
 	}
 
-	if filters.StartedBefore != nil {
+	if query.StartedBefore != nil {
 		where = append(where, "started_at <= $"+strconv.Itoa(nextPlaceholder))
-		args = append(args, *filters.StartedBefore)
+		args = append(args, *query.StartedBefore)
 		nextPlaceholder++
 	}
 
@@ -127,15 +143,30 @@ FROM ingested_events
 		q += "WHERE " + strings.Join(where, " AND ") + "\n"
 	}
 
-	q += "ORDER BY updated_at DESC, id ASC;"
+	switch query.Sort {
+	case listEventsSortUpdatedAtAsc:
+		q += "ORDER BY updated_at ASC, id ASC\n"
+	default:
+		q += "ORDER BY updated_at DESC, id ASC\n"
+	}
+
+	if query.Limit != nil {
+		q += "LIMIT $" + strconv.Itoa(nextPlaceholder) + " OFFSET $" + strconv.Itoa(nextPlaceholder+1) + ";"
+		args = append(args, *query.Limit+1, query.Cursor)
+	} else {
+		q += ";"
+	}
 
 	rows, err := r.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		var pqErr *pq.Error
 		if errors.As(err, &pqErr) && pqErr.Code == "42P01" {
-			return []Event{}, nil
+			return eventsListResponse{
+				Items:      []Event{},
+				NextCursor: "",
+			}, nil
 		}
-		return nil, fmt.Errorf("query ingested events: %w", err)
+		return eventsListResponse{}, fmt.Errorf("query ingested events: %w", err)
 	}
 	defer rows.Close()
 
@@ -156,7 +187,7 @@ FROM ingested_events
 			&startedAt,
 			&updatedAt,
 		); err != nil {
-			return nil, fmt.Errorf("scan ingested event: %w", err)
+			return eventsListResponse{}, fmt.Errorf("scan ingested event: %w", err)
 		}
 
 		ev.StartedAt = startedAt.UTC().Format(time.RFC3339)
@@ -165,10 +196,19 @@ FROM ingested_events
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("iterate ingested events: %w", err)
+		return eventsListResponse{}, fmt.Errorf("iterate ingested events: %w", err)
 	}
 
-	return events, nil
+	nextCursor := ""
+	if query.Limit != nil && len(events) > *query.Limit {
+		events = events[:*query.Limit]
+		nextCursor = strconv.Itoa(query.Cursor + *query.Limit)
+	}
+
+	return eventsListResponse{
+		Items:      events,
+		NextCursor: nextCursor,
+	}, nil
 }
 
 func (r *postgresEventsReader) GetEventByID(ctx context.Context, id string) (Event, error) {
@@ -317,22 +357,19 @@ func newRouterWithEventsReader(cfg config, reader eventsReader) chi.Router {
 	})
 
 	r.Get("/v1/events", func(w http.ResponseWriter, req *http.Request) {
-		filters, err := parseListEventsFilters(req.URL.Query())
+		query, err := parseListEventsQuery(req.URL.Query())
 		if err != nil {
 			writeError(w, http.StatusBadRequest, "bad_request", err.Error())
 			return
 		}
 
-		items, err := reader.ListEvents(req.Context(), filters)
+		resp, err := reader.ListEvents(req.Context(), query)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "events_read_failed", "failed to read events")
 			return
 		}
 
-		writeJSON(w, http.StatusOK, eventsListResponse{
-			Items:      items,
-			NextCursor: "",
-		})
+		writeJSON(w, http.StatusOK, resp)
 	})
 
 	r.Get("/v1/events/{id}", func(w http.ResponseWriter, req *http.Request) {
@@ -405,40 +442,78 @@ func getenv(key, fallback string) string {
 	return fallback
 }
 
-func parseListEventsFilters(values url.Values) (listEventsFilters, error) {
-	var filters listEventsFilters
+func parseListEventsQuery(values url.Values) (listEventsQuery, error) {
+	query := listEventsQuery{
+		Sort:   listEventsSortUpdatedAtDesc,
+		Cursor: 0,
+	}
 
 	for key := range values {
 		if _, ok := supportedEventsListQueryParams[key]; !ok {
-			return listEventsFilters{}, fmt.Errorf("invalid query parameter: %s", key)
+			return listEventsQuery{}, fmt.Errorf("invalid query parameter: %s", key)
 		}
 	}
 
 	if rawType := strings.TrimSpace(values.Get("type")); rawType != "" {
-		filters.Type = rawType
+		query.Type = rawType
 	}
 
 	if rawStartedAfter := strings.TrimSpace(values.Get("started_after")); rawStartedAfter != "" {
 		startedAfter, err := time.Parse(time.RFC3339, rawStartedAfter)
 		if err != nil {
-			return listEventsFilters{}, errors.New("invalid query parameter: started_after must be RFC3339")
+			return listEventsQuery{}, errors.New("invalid query parameter: started_after must be RFC3339")
 		}
 		startedAfter = startedAfter.UTC()
-		filters.StartedAfter = &startedAfter
+		query.StartedAfter = &startedAfter
 	}
 
 	if rawStartedBefore := strings.TrimSpace(values.Get("started_before")); rawStartedBefore != "" {
 		startedBefore, err := time.Parse(time.RFC3339, rawStartedBefore)
 		if err != nil {
-			return listEventsFilters{}, errors.New("invalid query parameter: started_before must be RFC3339")
+			return listEventsQuery{}, errors.New("invalid query parameter: started_before must be RFC3339")
 		}
 		startedBefore = startedBefore.UTC()
-		filters.StartedBefore = &startedBefore
+		query.StartedBefore = &startedBefore
 	}
 
-	if filters.StartedAfter != nil && filters.StartedBefore != nil && filters.StartedAfter.After(*filters.StartedBefore) {
-		return listEventsFilters{}, errors.New("invalid query parameter: started_after must be before or equal to started_before")
+	if query.StartedAfter != nil && query.StartedBefore != nil && query.StartedAfter.After(*query.StartedBefore) {
+		return listEventsQuery{}, errors.New("invalid query parameter: started_after must be before or equal to started_before")
 	}
 
-	return filters, nil
+	if rawSort := strings.TrimSpace(values.Get("sort")); rawSort != "" {
+		switch listEventsSort(rawSort) {
+		case listEventsSortUpdatedAtDesc, listEventsSortUpdatedAtAsc:
+			query.Sort = listEventsSort(rawSort)
+		default:
+			return listEventsQuery{}, errors.New("invalid query parameter: sort must be one of updated_at_desc,updated_at_asc")
+		}
+	}
+
+	if rawLimit := strings.TrimSpace(values.Get("limit")); rawLimit != "" {
+		limit, err := strconv.Atoi(rawLimit)
+		if err != nil {
+			return listEventsQuery{}, errors.New("invalid query parameter: limit must be an integer")
+		}
+		if limit <= 0 || limit > 200 {
+			return listEventsQuery{}, errors.New("invalid query parameter: limit must be between 1 and 200")
+		}
+		query.Limit = &limit
+	}
+
+	if rawCursor := strings.TrimSpace(values.Get("cursor")); rawCursor != "" {
+		cursor, err := strconv.Atoi(rawCursor)
+		if err != nil {
+			return listEventsQuery{}, errors.New("invalid query parameter: cursor must be an integer")
+		}
+		if cursor < 0 {
+			return listEventsQuery{}, errors.New("invalid query parameter: cursor must be greater than or equal to 0")
+		}
+		query.Cursor = cursor
+	}
+
+	if values.Get("cursor") != "" && query.Limit == nil {
+		return listEventsQuery{}, errors.New("invalid query parameter: cursor requires limit")
+	}
+
+	return query, nil
 }

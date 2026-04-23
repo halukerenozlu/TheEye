@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 4 - Sorting support
+- Step 6 - Tests and docs sync
 
 ---
 
@@ -69,6 +69,46 @@ Not added in Step 3:
 
 - sorting changes
 - pagination changes
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
+- Event model redesign
+
+## Step 4 Completion - Sorting Support
+
+Status: Completed
+
+Delivered:
+
+- optional sorting added for `GET /v1/events`
+- supported sort values are limited to `updated_at_desc` and `updated_at_asc`
+- invalid sort values return consistent JSON `400` errors
+
+Not added in Step 4:
+
+- detail-route behavior changes
+- Redis logic
+- SSE logic
+- scheduler logic
+- multi-source abstraction
+- Event model redesign
+
+## Step 5 Completion - Pagination Support
+
+Status: Completed
+
+Delivered:
+
+- optional `limit` and `cursor` parameters added
+- pagination keeps the stable response shape with `items` and `next_cursor`
+- empty string `next_cursor` is still used when there is no next page
+- invalid cursor usage returns consistent JSON `400` errors
+- minimal backend tests were added/updated for sorting and pagination behavior
+
+Not added in Step 5:
+
+- detail-route behavior changes
 - Redis logic
 - SSE logic
 - scheduler logic
