@@ -22,6 +22,8 @@ Phase 2 remains active.
 
 ## Phase 0 — Foundation
 
+**Status:** Completed
+
 **Goal:**
 
 - repository structure
@@ -29,15 +31,11 @@ Phase 2 remains active.
 - local development workflow
 - scripts and docs hygiene
 
-**Target version:**
-
-- `v0.1.0`
-
 ---
 
 ## Phase 1 — Product Definition and Domain Model
 
-**Status:** Complete in substance
+**Status:** Completed
 
 **Goal:**
 
@@ -48,13 +46,13 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.2.0`
+- `v0.1.0`
 
 ---
 
 ## Phase 2 — Backend Foundation
 
-**Status:** Active
+**Status:** Completed
 
 **Goal:**
 
@@ -67,7 +65,7 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.3.0`
+- `v0.2.0`
 
 ---
 
@@ -85,7 +83,7 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.4.0`
+- `v0.3.0`
 
 ---
 
@@ -103,7 +101,7 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.5.0`
+- `v0.4.0`
 
 ---
 
@@ -121,7 +119,7 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.6.0`
+- `v0.5.0`
 
 ---
 
@@ -138,7 +136,7 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.7.0`
+- `v0.6.0`
 
 ---
 
@@ -154,7 +152,7 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.8.0`
+- `v0.7.0`
 
 ---
 
@@ -172,7 +170,7 @@ Phase 2 remains active.
 
 **Target version:**
 
-- `v0.9.0` to `v1.0.0`
+- `v0.8.0` to `v1.0.0`
 
 ---
 
