@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { Event, EventFilters } from "../types";
 import { fetchEvents } from "../lib/api";
+import maplibregl from "maplibre-gl";
 
 export default function DashboardPage() {
   // --- State ---
@@ -16,6 +17,12 @@ export default function DashboardPage() {
 
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isMapReady, setIsMapReady] = useState(false);
+
+  // --- Refs ---
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const map = useRef<maplibregl.Map | null>(null);
+  const markers = useRef<maplibregl.Marker[]>([]);
 
   // --- Actions ---
   const loadEvents = useCallback(async () => {
@@ -35,6 +42,97 @@ export default function DashboardPage() {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  // --- Map Initialization ---
+  useEffect(() => {
+    if (map.current || !mapContainer.current) return;
+
+    console.log("Initializing map...");
+    const mapInstance = new maplibregl.Map({
+      container: mapContainer.current,
+      style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+      center: [0, 20],
+      zoom: 1.5,
+      attributionControl: false,
+    });
+
+    map.current = mapInstance;
+
+    mapInstance.addControl(
+      new maplibregl.NavigationControl({
+        showCompass: false,
+      }),
+      "bottom-right",
+    );
+
+    mapInstance.on("load", () => {
+      console.log("Map loaded successfully");
+      setIsMapReady(true);
+      mapInstance.resize();
+    });
+
+    mapInstance.on("error", (e) => {
+      console.error("Map error:", e);
+    });
+
+    return () => {
+      console.log("Cleaning up map...");
+      mapInstance.remove();
+      map.current = null;
+      setIsMapReady(false);
+    };
+  }, []);
+
+  // --- Marker Management ---
+  useEffect(() => {
+    const currentMap = map.current;
+    if (!currentMap || !isMapReady) {
+      console.log("Map not ready for markers", { hasMap: !!currentMap, isMapReady });
+      return;
+    }
+
+    console.log("Syncing markers...", events.length);
+    // Clear existing markers
+    markers.current.forEach((m) => m.remove());
+    markers.current = [];
+
+    const bounds = new maplibregl.LngLatBounds();
+    let hasGeometry = false;
+
+    // Add new markers for events with geometry
+    events.forEach((event) => {
+      if (!event.geometry) return;
+
+      hasGeometry = true;
+      const coords: [number, number] = [event.geometry.longitude, event.geometry.latitude];
+      bounds.extend(coords);
+
+      const el = document.createElement("div");
+      el.className = "group relative cursor-pointer";
+
+      const inner = document.createElement("div");
+      inner.className = `h-2.5 w-2.5 rounded-full border border-white/20 transition-transform duration-200 group-hover:scale-125 ${getSeverityColor(event.severity)}`;
+      el.appendChild(inner);
+
+      const marker = new maplibregl.Marker({ element: el })
+        .setLngLat(coords)
+        .addTo(currentMap);
+
+      el.addEventListener("click", () => {
+        setSelectedEventId(event.id);
+      });
+
+      markers.current.push(marker);
+    });
+
+    if (hasGeometry) {
+      currentMap.fitBounds(bounds, {
+        padding: 64,
+        maxZoom: 10,
+        duration: 2000,
+      });
+    }
+  }, [events, isMapReady]);
 
   const toggleSort = () => {
     setFilters((prev) => ({
@@ -232,47 +330,14 @@ export default function DashboardPage() {
         {/* 
           CENTER PANEL: MAP VIEWPORT
         */}
-        <main className="relative flex-1 bg-zinc-950 overflow-hidden">
-          <div
-            className="absolute inset-0 opacity-[0.03]"
-            style={{
-              backgroundImage:
-                "radial-gradient(circle, white 1px, transparent 1px)",
-              backgroundSize: "32px 32px",
-            }}
-          />
+        <main className="relative min-h-0 flex-1 bg-zinc-950 overflow-hidden">
+          <div ref={mapContainer} className="theeye-map absolute inset-0 h-full w-full" />
 
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <div className="relative mb-6 h-32 w-32">
-              <div className="absolute inset-0 rounded-full border border-zinc-900" />
-              <div className="absolute inset-2 rounded-full border border-zinc-800/50" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-[px] w-full bg-zinc-900 rotate-45" />
-                <div className="h-[px] w-full bg-zinc-900 -rotate-45" />
-              </div>
-            </div>
-            <div className="flex flex-col items-center gap-2">
-              <span className="text-[10px] font-mono uppercase tracking-[0.4em] text-zinc-600">
-                Geospatial Engine Scaffolding
-              </span>
-              <div className="h-0.5 w-32 overflow-hidden rounded-full bg-zinc-900">
-                <div className="h-full w-full bg-zinc-800/50" />
-              </div>
-            </div>
-          </div>
-
-          <div className="absolute bottom-6 right-6 flex flex-col gap-1.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded border border-zinc-800 bg-zinc-900/80 text-zinc-700">
-              <span className="text-xs">+</span>
-            </div>
-            <div className="flex h-8 w-8 items-center justify-center rounded border border-zinc-800 bg-zinc-900/80 text-zinc-700">
-              <span className="text-xs">-</span>
-            </div>
-          </div>
-
-          <div className="absolute bottom-2 left-4">
+          {/* Map Attribution/Status Overlay */}
+          <div className="absolute bottom-2 left-4 pointer-events-none">
             <span className="text-[8px] font-mono text-zinc-700 uppercase tracking-widest">
-              Live Coordinate Stream Pending
+              Engine: MapLibre GL <span className="mx-1 opacity-30">|</span>{" "}
+              Style: Dark Matter
             </span>
           </div>
         </main>

@@ -12,7 +12,7 @@ Phase 5 - First Dashboard
 
 Current active step:
 
-- Step 3 - Map marker rendering from current API data
+- Step 4 - Event selection and right-side detail panel
 
 ---
 
@@ -84,12 +84,27 @@ Not added in Step 2:
 
 ### Step 3 - Map marker rendering from current API data
 
-Delivered when:
+Status: Completed
 
+Delivered:
+
+- MapLibre GL integrated into the center map area
+- basemap is visibly rendered
 - markers render from available event geometry
+- map viewport/camera adjusts to visible event bounds
 - events without geometry are handled safely without UI breakage
+- restrained dark map styling preserved
+
+Not added in Step 3:
+
+- clustering or heavy map effects
+- full right-panel detail wiring
+- country interaction logic
+- backend contract redesign
 
 ### Step 4 - Event selection and right-side detail panel
+
+Status: Active
 
 Delivered when:
 

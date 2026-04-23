@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 3 - Map marker rendering from current API data
+- Step 4 - Event selection and right-side detail panel
 
 ---
 
@@ -84,6 +84,26 @@ Not added in Step 2:
 - full map rendering
 - full right-panel detail wiring
 - backend contract expansion beyond the already accepted readiness patch
+
+## Step 3 Completion - Map Marker Rendering From Current API Data
+
+Status: Completed
+
+Delivered:
+
+- MapLibre GL integrated into the center map area
+- dark basemap visibly renders in the dashboard map panel
+- markers render for events with geometry
+- map viewport adjusts to visible event bounds
+- events without geometry are handled safely without UI breakage
+- restrained dark map styling preserved
+
+Not added in Step 3:
+
+- full right-panel detail wiring
+- clustering or heavy map effects
+- country interaction logic
+- backend contract redesign
 
 ---
 
