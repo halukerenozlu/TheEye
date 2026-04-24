@@ -57,13 +57,13 @@ export default function DashboardPage() {
       try {
         const detail = await fetchEventDetail(selectedEventId);
         setSelectedEvent(detail);
-        
+
         // Focus map if geometry is available
         if (map.current && detail.geometry) {
           map.current.easeTo({
             center: [detail.geometry.longitude, detail.geometry.latitude],
             zoom: 6,
-            duration: 1500
+            duration: 1500,
           });
         }
       } catch (err) {
@@ -80,7 +80,6 @@ export default function DashboardPage() {
   useEffect(() => {
     if (map.current || !mapContainer.current) return;
 
-    console.log("Initializing map...");
     const mapInstance = new maplibregl.Map({
       container: mapContainer.current,
       style: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
@@ -99,7 +98,6 @@ export default function DashboardPage() {
     );
 
     mapInstance.on("load", () => {
-      console.log("Map loaded successfully");
       setIsMapReady(true);
       mapInstance.resize();
     });
@@ -109,7 +107,6 @@ export default function DashboardPage() {
     });
 
     return () => {
-      console.log("Cleaning up map...");
       mapInstance.remove();
       map.current = null;
       setIsMapReady(false);
@@ -119,12 +116,7 @@ export default function DashboardPage() {
   // --- Marker Management ---
   useEffect(() => {
     const currentMap = map.current;
-    if (!currentMap || !isMapReady) {
-      console.log("Map not ready for markers", { hasMap: !!currentMap, isMapReady });
-      return;
-    }
-
-    console.log("Syncing markers...", events.length);
+    if (!currentMap || !isMapReady) return;
     // Clear existing markers
     markers.current.forEach((m) => m.remove());
     markers.current.clear();
@@ -137,7 +129,10 @@ export default function DashboardPage() {
       if (!event.geometry) return;
 
       hasGeometry = true;
-      const coords: [number, number] = [event.geometry.longitude, event.geometry.latitude];
+      const coords: [number, number] = [
+        event.geometry.longitude,
+        event.geometry.latitude,
+      ];
       bounds.extend(coords);
 
       const isSelected = selectedEventId === event.id;
@@ -146,7 +141,7 @@ export default function DashboardPage() {
       el.className = "group relative cursor-pointer";
 
       const inner = document.createElement("div");
-      inner.className = `rounded-full border border-white/20 transition-all duration-300 group-hover:scale-125 ${getSeverityColor(event.severity)} ${isSelected ? 'h-4 w-4 shadow-[0_0_12px_rgba(255,255,255,0.4)] ring-2 ring-white/30' : 'h-2.5 w-2.5'}`;
+      inner.className = `rounded-full border border-white/20 transition-all duration-300 group-hover:scale-125 ${getSeverityColor(event.severity)} ${isSelected ? "h-4 w-4 shadow-[0_0_12px_rgba(255,255,255,0.4)] ring-2 ring-white/30" : "h-2.5 w-2.5"}`;
       el.appendChild(inner);
 
       const marker = new maplibregl.Marker({ element: el })
@@ -253,7 +248,14 @@ export default function DashboardPage() {
             ) : error ? (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center">
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-rose-900/30 bg-rose-950/10 text-rose-900">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                  >
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <line x1="12" y1="16" x2="12.01" y2="16" />
@@ -262,7 +264,7 @@ export default function DashboardPage() {
                 <p className="text-[10px] font-medium uppercase tracking-widest text-rose-900/80">
                   Signal Sync Failed
                 </p>
-                <button 
+                <button
                   onClick={loadEvents}
                   className="mt-4 text-[9px] font-bold uppercase tracking-tighter text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4"
                 >
@@ -272,7 +274,14 @@ export default function DashboardPage() {
             ) : events.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center text-zinc-700">
                 <div className="mb-4 h-12 w-12 opacity-20 grayscale filter">
-                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5">
+                  <svg
+                    width="48"
+                    height="48"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="0.5"
+                  >
                     <path d="M2 12h3l2 8 4-16 4 16 2-8h3" />
                   </svg>
                 </div>
@@ -286,10 +295,12 @@ export default function DashboardPage() {
                   <button
                     key={event.id}
                     onClick={() => setSelectedEventId(event.id)}
-                    className={`flex w-full flex-col gap-1.5 px-4 py-4 text-left transition-all duration-200 border-l-2 ${selectedEventId === event.id ? 'bg-zinc-800/30 border-emerald-500/50' : 'hover:bg-zinc-800/10 border-transparent'}`}
+                    className={`flex w-full flex-col gap-1.5 px-4 py-4 text-left transition-all duration-200 border-l-2 ${selectedEventId === event.id ? "bg-zinc-800/30 border-emerald-500/50" : "hover:bg-zinc-800/10 border-transparent"}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className={`text-[8px] font-mono font-bold uppercase tracking-tighter ${selectedEventId === event.id ? 'text-emerald-500' : 'text-zinc-500'}`}>
+                      <span
+                        className={`text-[8px] font-mono font-bold uppercase tracking-tighter ${selectedEventId === event.id ? "text-emerald-500" : "text-zinc-500"}`}
+                      >
                         {event.type}
                       </span>
                       <span className="text-[8px] font-mono text-zinc-600">
@@ -301,7 +312,9 @@ export default function DashboardPage() {
                         })}
                       </span>
                     </div>
-                    <h3 className={`line-clamp-2 text-[11px] font-medium leading-snug transition-colors ${selectedEventId === event.id ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-300'}`}>
+                    <h3
+                      className={`line-clamp-2 text-[11px] font-medium leading-snug transition-colors ${selectedEventId === event.id ? "text-white" : "text-zinc-400 group-hover:text-zinc-300"}`}
+                    >
                       {event.title}
                     </h3>
                     <div className="mt-0.5 flex items-center gap-1.5">
@@ -375,7 +388,10 @@ export default function DashboardPage() {
           CENTER PANEL: MAP VIEWPORT
         */}
         <main className="relative min-h-0 flex-1 bg-zinc-950 overflow-hidden">
-          <div ref={mapContainer} className="theeye-map absolute inset-0 h-full w-full" />
+          <div
+            ref={mapContainer}
+            className="theeye-map absolute inset-0 h-full w-full"
+          />
 
           {/* Map Attribution/Status Overlay */}
           <div className="absolute bottom-2 left-4 pointer-events-none">
@@ -395,7 +411,7 @@ export default function DashboardPage() {
               Event Intelligence
             </h2>
             {selectedEventId && (
-              <button 
+              <button
                 onClick={() => setSelectedEventId(null)}
                 className="text-[9px] font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-400 transition-colors"
               >
@@ -418,7 +434,9 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-500">
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className={`h-1.5 w-1.5 rounded-full ${getSeverityColor(selectedEvent.severity)}`} />
+                    <div
+                      className={`h-1.5 w-1.5 rounded-full ${getSeverityColor(selectedEvent.severity)}`}
+                    />
                     <span className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">
                       Signal ID: {selectedEvent.id}
                     </span>
@@ -430,24 +448,43 @@ export default function DashboardPage() {
 
                 <div className="grid grid-cols-2 gap-y-6 gap-x-4">
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Status</span>
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                      Status
+                    </span>
                     <span className="text-[11px] text-zinc-300 capitalize flex items-center gap-2">
                       <span className="h-1 w-1 rounded-full bg-zinc-500" />
                       {selectedEvent.status}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Severity</span>
-                    <span className="text-[11px] text-zinc-300">Level {selectedEvent.severity}</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Category</span>
-                    <span className="text-[11px] text-zinc-300 capitalize">{selectedEvent.type}</span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Temporal Mark</span>
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                      Severity
+                    </span>
                     <span className="text-[11px] text-zinc-300">
-                      {new Date(selectedEvent.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                      Level {selectedEvent.severity}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                      Category
+                    </span>
+                    <span className="text-[11px] text-zinc-300 capitalize">
+                      {selectedEvent.type}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                      Temporal Mark
+                    </span>
+                    <span className="text-[11px] text-zinc-300">
+                      {new Date(selectedEvent.started_at).toLocaleTimeString(
+                        [],
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        },
+                      )}
                     </span>
                   </div>
                 </div>
@@ -456,10 +493,12 @@ export default function DashboardPage() {
 
                 <div className="space-y-4">
                   <div className="flex flex-col gap-2">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Geospatial Position</span>
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                      Geospatial Position
+                    </span>
                     <div className="rounded border border-zinc-800/50 bg-zinc-950/50 p-3">
                       <span className="text-[10px] font-mono text-emerald-500/80">
-                        {selectedEvent.geometry 
+                        {selectedEvent.geometry
                           ? `${selectedEvent.geometry.latitude.toFixed(6)}°N, ${selectedEvent.geometry.longitude.toFixed(6)}°E`
                           : "Position data inaccessible"}
                       </span>
@@ -470,8 +509,9 @@ export default function DashboardPage() {
             ) : (
               <div className="flex h-full flex-col items-center justify-center text-center space-y-6">
                 <div className="h-px w-6 bg-zinc-800" />
-                <p className="max-w-[200px] text-[10px] leading-relaxed text-zinc-600 uppercase tracking-widest font-medium">
-                  Select a signal from the feed or map to inspect metadata and intelligence
+                <p className="max-w-50 text-[10px] leading-relaxed text-zinc-600 uppercase tracking-widest font-medium">
+                  Select a signal from the feed or map to inspect metadata and
+                  intelligence
                 </p>
                 <div className="h-px w-6 bg-zinc-800" />
               </div>

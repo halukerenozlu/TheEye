@@ -8,11 +8,11 @@ Phase 5 - First Dashboard
 
 ## Status
 
-**Active**
+**Completed**
 
 Current active step:
 
-- Step 6 - Tests and docs sync
+- None (Sprint completed)
 
 ---
 
@@ -135,12 +135,14 @@ Delivered:
 
 ### Step 6 - Tests and docs sync
 
-Status: Active
+Status: Completed
 
-Delivered when:
+Delivered:
 
-- minimal relevant tests are updated for accepted frontend/backend integration behavior
-- sprint and phase docs reflect accepted implementation state
+- dashboard frontend build verification completed successfully
+- core runtime behavior verified for feed, map, marker, and detail-panel selection flow
+- temporary debug logs and transient local debug artifacts cleaned up
+- sprint, phase, and changelog documentation synchronized to accepted state
 
 ---
 

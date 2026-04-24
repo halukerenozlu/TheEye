@@ -33,3 +33,8 @@ bin/
 Thumbs.db
 .vscode/
 .idea/
+
+# --- Local transient debug artifacts ---
+.codex-*/
+theeye-live-dashboard*.png
+debug-screenshot*.png
