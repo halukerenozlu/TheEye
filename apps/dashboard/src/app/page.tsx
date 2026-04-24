@@ -242,47 +242,54 @@ export default function DashboardPage() {
 
           <div className="flex-1 overflow-y-auto">
             {isLoading && events.length === 0 ? (
-              <div className="flex h-full items-center justify-center p-8 text-center">
-                <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-zinc-700 animate-pulse">
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center space-y-4">
+                <div className="relative h-px w-24 overflow-hidden bg-zinc-900">
+                  <div className="h-full w-1/3 animate-[loading_1.5s_infinite_ease-in-out] bg-zinc-700" />
+                </div>
+                <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-zinc-600">
                   Acquiring Stream...
                 </span>
               </div>
             ) : error ? (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                <div className="mb-2 text-rose-900">
-                  <svg
-                    width="24"
-                    height="24"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1"
-                  >
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-full border border-rose-900/30 bg-rose-950/10 text-rose-900">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                     <circle cx="12" cy="12" r="10" />
                     <line x1="12" y1="8" x2="12" y2="12" />
                     <line x1="12" y1="16" x2="12.01" y2="16" />
                   </svg>
                 </div>
-                <p className="text-[9px] uppercase tracking-widest text-rose-900/80">
-                  {error}
+                <p className="text-[10px] font-medium uppercase tracking-widest text-rose-900/80">
+                  Signal Sync Failed
                 </p>
+                <button 
+                  onClick={loadEvents}
+                  className="mt-4 text-[9px] font-bold uppercase tracking-tighter text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4"
+                >
+                  Retry Connection
+                </button>
               </div>
             ) : events.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center p-8 text-center text-zinc-700">
-                <p className="text-[9px] uppercase tracking-[0.2em]">
+                <div className="mb-4 h-12 w-12 opacity-20 grayscale filter">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="0.5">
+                    <path d="M2 12h3l2 8 4-16 4 16 2-8h3" />
+                  </svg>
+                </div>
+                <p className="text-[9px] uppercase tracking-[0.2em] font-medium text-zinc-600">
                   No active signals detected
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-zinc-800/30">
+              <div className="divide-y divide-zinc-800/20">
                 {events.map((event) => (
                   <button
                     key={event.id}
                     onClick={() => setSelectedEventId(event.id)}
-                    className={`flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-zinc-800/30 ${selectedEventId === event.id ? "bg-zinc-800/50" : ""}`}
+                    className={`flex w-full flex-col gap-1.5 px-4 py-4 text-left transition-all duration-200 border-l-2 ${selectedEventId === event.id ? 'bg-zinc-800/30 border-emerald-500/50' : 'hover:bg-zinc-800/10 border-transparent'}`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[8px] font-mono font-bold text-zinc-500 uppercase tracking-tighter">
+                      <span className={`text-[8px] font-mono font-bold uppercase tracking-tighter ${selectedEventId === event.id ? 'text-emerald-500' : 'text-zinc-500'}`}>
                         {event.type}
                       </span>
                       <span className="text-[8px] font-mono text-zinc-600">
@@ -294,16 +301,16 @@ export default function DashboardPage() {
                         })}
                       </span>
                     </div>
-                    <h3 className="line-clamp-2 text-[11px] font-medium leading-tight text-zinc-300">
+                    <h3 className={`line-clamp-2 text-[11px] font-medium leading-snug transition-colors ${selectedEventId === event.id ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-300'}`}>
                       {event.title}
                     </h3>
-                    <div className="mt-1 flex items-center gap-1.5">
+                    <div className="mt-0.5 flex items-center gap-1.5">
                       <div
                         className={`h-1 w-1 rounded-full ${getSeverityColor(event.severity)}`}
                       />
-                      <span className="text-[8px] font-medium text-zinc-600 uppercase tracking-widest">
+                      <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
                         Lvl {event.severity}{" "}
-                        <span className="mx-1 opacity-30">|</span>{" "}
+                        <span className="mx-1 opacity-20">|</span>{" "}
                         {event.status}
                       </span>
                     </div>
@@ -399,79 +406,74 @@ export default function DashboardPage() {
 
           <div className="flex-1 overflow-y-auto p-6">
             {isDetailLoading ? (
-              <div className="flex h-full items-center justify-center">
-                <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-zinc-700 animate-pulse">
+              <div className="flex h-full flex-col items-center justify-center space-y-4">
+                <div className="relative h-0.5 w-16 overflow-hidden bg-zinc-900">
+                  <div className="h-full w-1/3 animate-[loading_1s_infinite_ease-in-out] bg-zinc-600" />
+                </div>
+                <span className="text-[9px] font-mono uppercase tracking-[0.3em] text-zinc-600">
                   Analyzing Entity...
                 </span>
               </div>
             ) : selectedEvent ? (
-              <div className="flex flex-col gap-6 animate-in fade-in slide-in-from-right-2 duration-300">
-                <div>
-                  <div className="mb-1 text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">
-                    ID: {selectedEvent.id}
+              <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`h-1.5 w-1.5 rounded-full ${getSeverityColor(selectedEvent.severity)}`} />
+                    <span className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">
+                      Signal ID: {selectedEvent.id}
+                    </span>
                   </div>
-                  <h2 className="text-lg font-medium leading-tight text-white">
+                  <h2 className="text-xl font-semibold leading-tight text-white tracking-tight">
                     {selectedEvent.title}
                   </h2>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                      Status
-                    </span>
-                    <span className="text-xs text-zinc-400 capitalize">
+                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Status</span>
+                    <span className="text-[11px] text-zinc-300 capitalize flex items-center gap-2">
+                      <span className="h-1 w-1 rounded-full bg-zinc-500" />
                       {selectedEvent.status}
                     </span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                      Severity
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      Level {selectedEvent.severity}
-                    </span>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Severity</span>
+                    <span className="text-[11px] text-zinc-300">Level {selectedEvent.severity}</span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                      Type
-                    </span>
-                    <span className="text-xs text-zinc-400 capitalize">
-                      {selectedEvent.type}
-                    </span>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Category</span>
+                    <span className="text-[11px] text-zinc-300 capitalize">{selectedEvent.type}</span>
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                      Initial Signal
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      {new Date(selectedEvent.started_at).toLocaleTimeString()}
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Temporal Mark</span>
+                    <span className="text-[11px] text-zinc-300">
+                      {new Date(selectedEvent.started_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                     </span>
                   </div>
                 </div>
 
-                <div className="h-px w-full bg-zinc-800/50" />
+                <div className="h-px w-full bg-zinc-800/40" />
 
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                      Position
-                    </span>
-                    <span className="text-[10px] font-mono text-zinc-500">
-                      {selectedEvent.geometry 
-                        ? `${selectedEvent.geometry.latitude.toFixed(4)}°N, ${selectedEvent.geometry.longitude.toFixed(4)}°E`
-                        : "Geospatial data unavailable"}
-                    </span>
+                <div className="space-y-4">
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">Geospatial Position</span>
+                    <div className="rounded border border-zinc-800/50 bg-zinc-950/50 p-3">
+                      <span className="text-[10px] font-mono text-emerald-500/80">
+                        {selectedEvent.geometry 
+                          ? `${selectedEvent.geometry.latitude.toFixed(6)}°N, ${selectedEvent.geometry.longitude.toFixed(6)}°E`
+                          : "Position data inaccessible"}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             ) : (
-              <div className="flex h-full flex-col items-center justify-center text-center">
-                <div className="mb-4 h-px w-8 bg-zinc-800" />
-                <p className="max-w-45 text-[10px] leading-relaxed text-zinc-600 uppercase tracking-wider">
-                  Select a signal from the feed or map to inspect metadata and
-                  intelligence.
+              <div className="flex h-full flex-col items-center justify-center text-center space-y-6">
+                <div className="h-px w-6 bg-zinc-800" />
+                <p className="max-w-[200px] text-[10px] leading-relaxed text-zinc-600 uppercase tracking-widest font-medium">
+                  Select a signal from the feed or map to inspect metadata and intelligence
                 </p>
+                <div className="h-px w-6 bg-zinc-800" />
               </div>
             )}
           </div>

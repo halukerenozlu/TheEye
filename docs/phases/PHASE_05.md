@@ -12,7 +12,7 @@ Current sprint:
 
 Current active step:
 
-- Step 5 - Basic visual polish for loading/empty/error states
+- Step 6 - Tests and docs sync
 
 ---
 
@@ -123,6 +123,18 @@ Not added in Step 4:
 - country interaction logic
 - clustering
 - backend contract redesign
+
+## Step 5 Completion - Basic Visual Polish For Loading/Empty/Error States
+
+Status: Completed
+
+Delivered:
+
+- loading / empty / error states refined
+- selected-state clarity improved
+- feed/detail visual consistency improved
+- category/filter control visual issues cleaned up where applicable
+- overall restrained dark design language preserved
 
 ---
 
