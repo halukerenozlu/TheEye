@@ -400,6 +400,8 @@ Rules:
 
 ## 19) Source of Truth Order
 
+`VISION.md` defines long-term direction (north star), but active implementation scope is controlled by current phase and sprint documents.
+
 If documents conflict, follow this order:
 
 1. `AGENTS.md`

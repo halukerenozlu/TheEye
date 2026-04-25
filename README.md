@@ -1,6 +1,6 @@
 # TheEye
 
-TheEye is a **map-first, near real-time world monitoring platform** built as a structured monorepo.
+TheEye is a **map-first global signal platform** built as a structured monorepo.
 
 The repository is designed to support disciplined product planning, scoped implementation, and controlled multi-agent collaboration without losing architectural clarity or breaking the local development flow.
 
@@ -9,6 +9,10 @@ The repository is designed to support disciplined product planning, scoped imple
 ## Purpose
 
 TheEye exists to reduce fragmentation across world-signal sources by collecting, normalizing, and presenting them through one coherent event-driven experience.
+
+In the near term, product delivery stays focused on a reliable multi-source event monitoring core: ingestion, normalization, storage, and a stable map/feed/detail workflow.
+
+Over the long term, TheEye can expand toward broader global-signal coverage, including carefully scoped human-system and global-stability-relevant signals, without sacrificing phase discipline.
 
 Early signal categories include:
 
@@ -25,6 +29,11 @@ The guiding principle is simple:
 - **normalized event model**
 - **controlled, reviewable engineering**
 - **stable local development with Docker-based infrastructure**
+
+Vision note:
+
+- `VISION.md` is the north star for long-term direction.
+- active implementation scope is defined by current phase and sprint documents.
 
 ---
 
@@ -65,31 +74,30 @@ This rule exists to reduce silent contract drift.
 
 ```text
 TheEye/
-├─ apps/
-│  └─ dashboard/          # Frontend application
-├─ services/
-│  ├─ api/                # Go API service
-│  └─ collector/          # Ingestion workers/connectors
-├─ shared/
-│  └─ schema/             # Shared event schema, contracts, generated types
-├─ infra/
-│  └─ docker-compose.yml  # Local infrastructure and service orchestration
-├─ scripts/               # Helper scripts
-├─ README.md
-├─ AGENTS.md
-├─ WORKFLOW.md
-├─ VERSIONING.md
-├─ VISION.md
-├─ GEMINI.md
-├─ CLAUDE.md
-├─ ROADMAP.md
-├─ PHASE_01.md
-├─ PHASE_02.md
-└─ SPRINT_01.md
+|- apps/
+|  |- dashboard/                  # Frontend application
+|- services/
+|  |- api/                        # Go API service
+|  |- collector/                  # Ingestion workers/connectors
+|- infra/
+|  |- docker-compose.yml          # Local infrastructure and service orchestration
+|- docs/
+|  |- ROADMAP.md
+|  |- phases/
+|  |  |- PHASE_01.md
+|  |  |- ...
+|  |- sprints/
+|  |  |- PHASE_02_SPRINT_01.md
+|  |  |- ...
+|- scripts/                       # Helper scripts
+|- README.md
+|- AGENTS.md
+|- WORKFLOW.md
+|- VERSIONING.md
+|- VISION.md
+|- GEMINI.md
+|- CLAUDE.md
 ```
-
----
-
 ## Document Map
 
 ### `README.md`
@@ -109,14 +117,14 @@ Use for:
 - long-term direction
 - what TheEye is and is not
 
-### `ROADMAP.md`
+### `docs/ROADMAP.md`
 Use for:
 
 - phase sequence
 - milestone intent
 - long-term build order
 
-### `PHASE_01.md`, `PHASE_02.md`, ...
+### `docs/phases/PHASE_01.md`, `docs/phases/PHASE_02.md`, ...
 Use for:
 
 - phase-specific goals
@@ -124,7 +132,7 @@ Use for:
 - exit criteria
 - current status
 
-### `SPRINT_01.md`, `SPRINT_02.md`, ...
+### `docs/sprints/PHASE_02_SPRINT_01.md`, ...
 Use for:
 
 - sprint goal
@@ -185,27 +193,12 @@ Implementation must follow the documented plan, not invent a new one.
 
 ## Current Documented Progress Snapshot
 
-### Completed or effectively closed work
+For up-to-date operational status, use:
 
-- **Phase 1 — Product Definition and Domain Model** is documented as complete in substance and can be treated as closed unless new product-direction changes appear.
-- **Phase 2 / Sprint 1 / Steps 1-5** are documented as completed:
-  - `GET /v1/healthz`
-  - `GET /v1/readyz`
-  - `GET /v1/meta`
-  - structured config + graceful shutdown
-  - placeholder `GET /v1/events`
-  - minimal typed `Event` draft
-  - placeholder `GET /v1/events/{id}`
+- docs/phases/PHASE_06.md
+- docs/sprints/PHASE_06_SPRINT_01.md
 
-### Active work
-
-- **Phase 2 — Backend Foundation**
-- **Sprint 1 — Backend Service Skeleton**
-- **Step 6 — Response and error shape cleanup**
-
-### Important note
-
-Completed work should be moved out of the active focus mentally, but **not deleted from project history**. Keep completed work visible through a small status snapshot or archive section rather than mixing it into active tasks.
+Completed work should remain visible in project history, but implementation decisions should follow the latest active phase/sprint docs.
 
 ---
 
@@ -290,3 +283,5 @@ Prefer creating tags when:
 TheEye should not only be built correctly; it should be built in a way that remains understandable, traceable, and stable even when multiple AI tools are involved.
 
 When in doubt, the documented project direction wins.
+
+

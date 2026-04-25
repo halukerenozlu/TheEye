@@ -2,21 +2,33 @@
 
 ## Vision
 
-TheEye aims to become a monitoring and intelligence-style platform that collects, organizes, and presents meaningful signals, events, and sources through a map-first, event-driven product.
+TheEye aims to become a map-first global signal platform that collects, organizes, and presents meaningful signals through an event-driven product.
 
-The early goal is not maximum scale.
-The early goal is a clean, credible, end-to-end working product slice.
+Near-term roadmap focus:
+
+- reliable multi-source event ingestion and normalization
+- stable map + feed + detail monitoring flow
+- disciplined delivery through active phase/sprint scope
+
+Long-term north star:
+
+- gradual expansion from natural/physical events toward broader global signals
+- eventual inclusion of carefully scoped human-system and global-stability signals
+
+Long-term direction should guide prioritization, but active implementation scope remains phase/sprint-driven.
 
 ---
 
 ## Current Planning Status
 
-- **Current active phase:** Phase 2 — Backend Foundation
-- **Current active sprint:** Sprint 1 — Backend Service Skeleton
-- **Current active step:** Step 6 — Response and error shape cleanup
+- **Current active phase:** Phase 6 - Signal Expansion Foundation
+- **Current active sprint:** Sprint 1 - Reliability and Contract Foundation (Completed)
+- **Current active step:** None (Sprint completed)
 
-Phase 1 is treated as effectively complete based on the current documentation set.
-Phase 2 remains active.
+For current implementation boundaries, follow:
+
+- `docs/phases/PHASE_06.md`
+- `docs/sprints/PHASE_06_SPRINT_01.md`
 
 ---
 
@@ -44,9 +56,6 @@ Phase 2 remains active.
 - define MVP boundaries
 - define domain entities and database draft
 
-**Target version:**
-
-- `v0.1.0`
 
 ---
 
@@ -63,9 +72,6 @@ Phase 2 remains active.
 - service boundaries
 - stable local Docker-backed flow for backend development
 
-**Target version:**
-
-- `v0.2.0`
 
 ---
 
@@ -81,15 +87,12 @@ Phase 2 remains active.
 - avoid duplicates
 - establish the first usable data pipeline
 
-**Target version:**
-
-- `v0.3.0`
 
 ---
 
 ## Phase 4 — API Layer
 
-**Status:** Upcoming
+**Status:** Completed
 
 **Goal:**
 
@@ -99,15 +102,12 @@ Phase 2 remains active.
 - sorting
 - pagination
 
-**Target version:**
-
-- `v0.4.0`
 
 ---
 
 ## Phase 5 — First Dashboard
 
-**Status:** Upcoming
+**Status:** Completed
 
 **Goal:**
 
@@ -117,26 +117,21 @@ Phase 2 remains active.
 - event detail UI
 - stable first user-facing interface
 
-**Target version:**
-
-- `v0.5.0`
 
 ---
 
-## Phase 6 — Better UX and Product Depth
+## Phase 6 - Signal Expansion Foundation
 
-**Status:** Upcoming
+**Status:** Active
 
 **Goal:**
 
-- timeline and visualization
-- richer filtering
-- saved views
-- better usability
+- stabilize the current single-source monitoring flow
+- establish backend contract reliability (`severity_level`, `category`)
+- run predictable polling + refresh behavior
+- keep collector-backed ingest reliable in local Docker flow
+- prepare a clean base for one next real source without scope drift
 
-**Target version:**
-
-- `v0.6.0`
 
 ---
 
@@ -150,9 +145,6 @@ Phase 2 remains active.
 - tracked topics or regions
 - basic admin capabilities
 
-**Target version:**
-
-- `v0.7.0`
 
 ---
 
@@ -168,10 +160,6 @@ Phase 2 remains active.
 - demo readiness
 - release preparation
 
-**Target version:**
-
-- `v0.8.0` to `v1.0.0`
-
 ---
 
 ## Progress Visibility Rule
@@ -183,3 +171,9 @@ Use:
 - active phase / sprint / step for current work
 - completed sections for historical reference
 - version tags only at meaningful checkpoints
+
+Vision/scope note:
+
+- `VISION.md` is the north star for long-term direction.
+- near-term build scope is controlled by active phase/sprint documents.
+
