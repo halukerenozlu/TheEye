@@ -11,6 +11,24 @@ import (
 	"time"
 )
 
+type rawEventResponse struct {
+	ID            string         `json:"id"`
+	Category      string         `json:"category"`
+	Type          string         `json:"type"`
+	Title         string         `json:"title"`
+	Status        string         `json:"status"`
+	Severity      int            `json:"severity"`
+	SeverityLevel int            `json:"severity_level"`
+	StartedAt     string         `json:"started_at"`
+	UpdatedAt     string         `json:"updated_at"`
+	Geometry      *EventGeometry `json:"geometry,omitempty"`
+}
+
+type rawEventsListResponse struct {
+	Items      []rawEventResponse `json:"items"`
+	NextCursor string             `json:"next_cursor"`
+}
+
 func testConfig() config {
 	return config{
 		Port:        "8080",
@@ -188,7 +206,7 @@ func TestEventsDetailReturnsStoredData(t *testing.T) {
 				Type:      "earthquake",
 				Title:     "M 3.4 - Test",
 				Status:    "confirmed",
-				Severity:  2,
+				Severity:  4,
 				StartedAt: "2023-11-14T22:13:20Z",
 				UpdatedAt: "2023-11-14T22:13:21Z",
 			},
@@ -203,7 +221,7 @@ func TestEventsDetailReturnsStoredData(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
-	var got Event
+	var got rawEventResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("unmarshal event detail response: %v", err)
 	}
@@ -213,6 +231,15 @@ func TestEventsDetailReturnsStoredData(t *testing.T) {
 	}
 	if got.Type != "earthquake" {
 		t.Fatalf("type = %q, want %q", got.Type, "earthquake")
+	}
+	if got.Category != "natural_disaster" {
+		t.Fatalf("category = %q, want %q", got.Category, "natural_disaster")
+	}
+	if got.SeverityLevel != 2 {
+		t.Fatalf("severity_level = %d, want %d", got.SeverityLevel, 2)
+	}
+	if got.Severity != got.SeverityLevel {
+		t.Fatalf("severity = %d, want same value as severity_level %d", got.Severity, got.SeverityLevel)
 	}
 }
 
@@ -298,9 +325,9 @@ func TestEventsListReturnsStoredData(t *testing.T) {
 			{
 				ID:        "usgs:abc123",
 				Type:      "earthquake",
-				Title:     "M 3.4 - Test",
+				Title:     "M 6.2 - Test",
 				Status:    "confirmed",
-				Severity:  2,
+				Severity:  5,
 				StartedAt: "2023-11-14T22:13:20Z",
 				UpdatedAt: "2023-11-14T22:13:21Z",
 			},
@@ -315,7 +342,7 @@ func TestEventsListReturnsStoredData(t *testing.T) {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
 	}
 
-	var got eventsListResponse
+	var got rawEventsListResponse
 	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
 		t.Fatalf("unmarshal events list response: %v", err)
 	}
@@ -326,8 +353,53 @@ func TestEventsListReturnsStoredData(t *testing.T) {
 	if got.Items[0].ID != "usgs:abc123" {
 		t.Fatalf("items[0].id = %q, want %q", got.Items[0].ID, "usgs:abc123")
 	}
+	if got.Items[0].Category != "natural_disaster" {
+		t.Fatalf("items[0].category = %q, want %q", got.Items[0].Category, "natural_disaster")
+	}
+	if got.Items[0].SeverityLevel != 3 {
+		t.Fatalf("items[0].severity_level = %d, want %d", got.Items[0].SeverityLevel, 3)
+	}
+	if got.Items[0].Severity != got.Items[0].SeverityLevel {
+		t.Fatalf("items[0].severity = %d, want same value as severity_level %d", got.Items[0].Severity, got.Items[0].SeverityLevel)
+	}
 	if got.NextCursor != "" {
 		t.Fatalf("next_cursor = %q, want empty string", got.NextCursor)
+	}
+}
+
+func TestNormalizeSeverityLevelFallsBackToStoredSeverity(t *testing.T) {
+	tests := []struct {
+		name           string
+		storedSeverity int
+		want           int
+	}{
+		{name: "low", storedSeverity: 1, want: 1},
+		{name: "mid", storedSeverity: 2, want: 2},
+		{name: "legacy high", storedSeverity: 5, want: 3},
+		{name: "zero clamps to 1", storedSeverity: 0, want: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := normalizeSeverityLevel(tt.storedSeverity, "Source title without magnitude")
+			if got != tt.want {
+				t.Fatalf("normalizeSeverityLevel(%d) = %d, want %d", tt.storedSeverity, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeCategoryFallsBackFromType(t *testing.T) {
+	got := normalizeCategory("", "earthquake")
+	if got != "natural_disaster" {
+		t.Fatalf("normalizeCategory fallback = %q, want %q", got, "natural_disaster")
+	}
+}
+
+func TestNormalizeCategoryPreservesProvidedValue(t *testing.T) {
+	got := normalizeCategory("natural_disaster", "earthquake")
+	if got != "natural_disaster" {
+		t.Fatalf("normalizeCategory preserve = %q, want %q", got, "natural_disaster")
 	}
 }
 

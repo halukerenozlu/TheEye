@@ -29,5 +29,17 @@ services:
       - postgres
       - redis
 
+  collector:
+    build:
+      context: ../services/collector
+      dockerfile: Dockerfile
+    environment:
+      DATABASE_URL: "postgres://theeye:theeye@postgres:5432/theeye?sslmode=disable"
+      USGS_FEED_URL: "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson"
+      COLLECTOR_INTERVAL: "5m"
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
 volumes:
   theeye_pg:

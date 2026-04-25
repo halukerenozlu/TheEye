@@ -5,10 +5,13 @@ import { Event, EventFilters } from "../types";
 import { fetchEvents, fetchEventDetail } from "../lib/api";
 import maplibregl from "maplibre-gl";
 
+const EVENTS_POLL_INTERVAL_MS = 30000;
+
 export default function DashboardPage() {
   // --- State ---
   const [events, setEvents] = useState<Event[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [filters, setFilters] = useState<EventFilters>({
@@ -27,23 +30,84 @@ export default function DashboardPage() {
   const markers = useRef<Map<string, maplibregl.Marker>>(new Map());
 
   // --- Actions ---
-  const loadEvents = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const data = await fetchEvents(filters);
-      setEvents(data.items);
-    } catch (err) {
-      console.error(err);
-      setError("Failed to sync with signal intelligence");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [filters]);
+  const loadEvents = useCallback(
+    async (options?: { background?: boolean }) => {
+      const isBackgroundRefresh = options?.background ?? false;
+
+      if (isBackgroundRefresh) {
+        setIsRefreshing(true);
+      } else {
+        setIsLoading(true);
+        setError(null);
+      }
+
+      try {
+        const data = await fetchEvents(filters);
+        setEvents(data.items);
+      } catch (err) {
+        console.error(err);
+
+        if (!isBackgroundRefresh || events.length === 0) {
+          setError("Failed to sync with signal intelligence");
+        }
+      } finally {
+        if (isBackgroundRefresh) {
+          setIsRefreshing(false);
+        } else {
+          setIsLoading(false);
+        }
+      }
+    },
+    [events.length, filters],
+  );
 
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    const poll = () => {
+      if (document.hidden) {
+        return;
+      }
+
+      void loadEvents({ background: true });
+    };
+
+    const intervalId = window.setInterval(poll, EVENTS_POLL_INTERVAL_MS);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [loadEvents]);
+
+  useEffect(() => {
+    if (!selectedEventId) {
+      return;
+    }
+
+    const selectedEventFromList = events.find(
+      (event) => event.id === selectedEventId,
+    );
+
+    if (!selectedEventFromList) {
+      setSelectedEventId(null);
+      setSelectedEvent(null);
+      return;
+    }
+
+    setSelectedEvent((current) => {
+      if (!current || current.id !== selectedEventId) {
+        return current;
+      }
+
+      return {
+        ...current,
+        ...selectedEventFromList,
+        geometry: selectedEventFromList.geometry ?? current.geometry,
+      };
+    });
+  }, [events, selectedEventId]);
 
   // Load detail when selection changes
   useEffect(() => {
@@ -136,12 +200,13 @@ export default function DashboardPage() {
       bounds.extend(coords);
 
       const isSelected = selectedEventId === event.id;
+      const severityTone = getSeverityTone(event.severity);
 
       const el = document.createElement("div");
       el.className = "group relative cursor-pointer";
 
       const inner = document.createElement("div");
-      inner.className = `rounded-full border border-white/20 transition-all duration-300 group-hover:scale-125 ${getSeverityColor(event.severity)} ${isSelected ? "h-4 w-4 shadow-[0_0_12px_rgba(255,255,255,0.4)] ring-2 ring-white/30" : "h-2.5 w-2.5"}`;
+      inner.className = `rounded-full border transition-all duration-300 group-hover:scale-125 ${severityTone.markerClass} ${isSelected ? "h-4 w-4 shadow-[0_0_12px_rgba(255,255,255,0.4)] ring-2 ring-white/30" : severityTone.markerSizeClass}`;
       el.appendChild(inner);
 
       const marker = new maplibregl.Marker({ element: el })
@@ -200,10 +265,14 @@ export default function DashboardPage() {
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 rounded-full border border-zinc-800 bg-zinc-900/50 px-2.5 py-1">
             <div
-              className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)] ${isLoading ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`}
+              className={`h-1.5 w-1.5 rounded-full shadow-[0_0_8px_rgba(16,185,129,0.5)] ${isLoading || isRefreshing ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`}
             />
             <span className="text-[9px] font-semibold text-zinc-400 uppercase tracking-tighter">
-              {isLoading ? "Syncing Signals..." : "System Ready"}
+              {isLoading
+                ? "Syncing Signals..."
+                : isRefreshing
+                  ? "Refreshing Feed..."
+                  : "System Ready"}
             </span>
           </div>
         </div>
@@ -223,7 +292,7 @@ export default function DashboardPage() {
             </h2>
             <div className="flex gap-1.5">
               <button
-                onClick={loadEvents}
+                onClick={() => void loadEvents()}
                 title="Refresh feed"
                 className="h-1.5 w-1.5 rounded-full bg-zinc-700 hover:bg-zinc-500 transition-colors"
               />
@@ -265,7 +334,7 @@ export default function DashboardPage() {
                   Signal Sync Failed
                 </p>
                 <button
-                  onClick={loadEvents}
+                  onClick={() => void loadEvents()}
                   className="mt-4 text-[9px] font-bold uppercase tracking-tighter text-zinc-500 hover:text-zinc-300 transition-colors underline underline-offset-4"
                 >
                   Retry Connection
@@ -297,36 +366,49 @@ export default function DashboardPage() {
                     onClick={() => setSelectedEventId(event.id)}
                     className={`flex w-full flex-col gap-1.5 px-4 py-4 text-left transition-all duration-200 border-l-2 ${selectedEventId === event.id ? "bg-zinc-800/30 border-emerald-500/50" : "hover:bg-zinc-800/10 border-transparent"}`}
                   >
-                    <div className="flex items-center justify-between">
-                      <span
-                        className={`text-[8px] font-mono font-bold uppercase tracking-tighter ${selectedEventId === event.id ? "text-emerald-500" : "text-zinc-500"}`}
-                      >
-                        {event.type}
-                      </span>
-                      <span className="text-[8px] font-mono text-zinc-600">
-                        {new Date(event.started_at).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                          hour12: false,
-                        })}
-                      </span>
-                    </div>
-                    <h3
-                      className={`line-clamp-2 text-[11px] font-medium leading-snug transition-colors ${selectedEventId === event.id ? "text-white" : "text-zinc-400 group-hover:text-zinc-300"}`}
-                    >
-                      {event.title}
-                    </h3>
-                    <div className="mt-0.5 flex items-center gap-1.5">
-                      <div
-                        className={`h-1 w-1 rounded-full ${getSeverityColor(event.severity)}`}
-                      />
-                      <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                        Lvl {event.severity}{" "}
-                        <span className="mx-1 opacity-20">|</span>{" "}
-                        {event.status}
-                      </span>
-                    </div>
+                    {(() => {
+                      const severityTone = getSeverityTone(event.severity);
+                      return (
+                        <>
+                          <div className="flex items-center justify-between">
+                            <span
+                              className={`text-[8px] font-mono font-bold uppercase tracking-tighter ${selectedEventId === event.id ? "text-emerald-500" : "text-zinc-500"}`}
+                            >
+                              {event.type}
+                            </span>
+                            <span className="text-[8px] font-mono text-zinc-600">
+                              {new Date(event.started_at).toLocaleTimeString(
+                                [],
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                  second: "2-digit",
+                                  hour12: false,
+                                },
+                              )}
+                            </span>
+                          </div>
+                          <h3
+                            className={`line-clamp-2 text-[11px] font-medium leading-snug transition-colors ${selectedEventId === event.id ? "text-white" : "text-zinc-400 group-hover:text-zinc-300"}`}
+                          >
+                            {event.title}
+                          </h3>
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <div
+                              className={`h-1.5 w-1.5 rounded-full ${severityTone.dotClass}`}
+                            />
+                            <span
+                              className={`rounded border px-1.5 py-px text-[8px] font-bold uppercase tracking-widest ${severityTone.badgeClass}`}
+                            >
+                              Lvl {clampSeverityLevel(event.severity)}
+                            </span>
+                            <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
+                              {event.status}
+                            </span>
+                          </div>
+                        </>
+                      );
+                    })()}
                   </button>
                 ))}
               </div>
@@ -431,81 +513,87 @@ export default function DashboardPage() {
                 </span>
               </div>
             ) : selectedEvent ? (
-              <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-500">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`h-1.5 w-1.5 rounded-full ${getSeverityColor(selectedEvent.severity)}`}
-                    />
-                    <span className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">
-                      Signal ID: {selectedEvent.id}
-                    </span>
-                  </div>
-                  <h2 className="text-xl font-semibold leading-tight text-white tracking-tight">
-                    {selectedEvent.title}
-                  </h2>
-                </div>
+              (() => {
+                const severityTone = getSeverityTone(selectedEvent.severity);
+                return (
+                  <div className="flex flex-col gap-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                    <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`h-1.5 w-1.5 rounded-full ${severityTone.dotClass}`}
+                        />
+                        <span className="text-[8px] font-mono font-bold text-zinc-600 uppercase tracking-widest">
+                          Signal ID: {selectedEvent.id}
+                        </span>
+                      </div>
+                      <h2 className="text-xl font-semibold leading-tight text-white tracking-tight">
+                        {selectedEvent.title}
+                      </h2>
+                    </div>
 
-                <div className="grid grid-cols-2 gap-y-6 gap-x-4">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
-                      Status
-                    </span>
-                    <span className="text-[11px] text-zinc-300 capitalize flex items-center gap-2">
-                      <span className="h-1 w-1 rounded-full bg-zinc-500" />
-                      {selectedEvent.status}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
-                      Severity
-                    </span>
-                    <span className="text-[11px] text-zinc-300">
-                      Level {selectedEvent.severity}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
-                      Category
-                    </span>
-                    <span className="text-[11px] text-zinc-300 capitalize">
-                      {selectedEvent.type}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
-                      Temporal Mark
-                    </span>
-                    <span className="text-[11px] text-zinc-300">
-                      {new Date(selectedEvent.started_at).toLocaleTimeString(
-                        [],
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                          second: "2-digit",
-                        },
-                      )}
-                    </span>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                          Status
+                        </span>
+                        <span className="text-[11px] text-zinc-300 capitalize flex items-center gap-2">
+                          <span className="h-1 w-1 rounded-full bg-zinc-500" />
+                          {selectedEvent.status}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                          Severity
+                        </span>
+                        <span
+                          className={`text-[11px] font-semibold ${severityTone.textClass}`}
+                        >
+                          Level {clampSeverityLevel(selectedEvent.severity)}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                          Category
+                        </span>
+                        <span className="text-[11px] text-zinc-300 capitalize">
+                          {selectedEvent.type}
+                        </span>
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                          Temporal Mark
+                        </span>
+                        <span className="text-[11px] text-zinc-300">
+                          {new Date(
+                            selectedEvent.started_at,
+                          ).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                            second: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </div>
 
-                <div className="h-px w-full bg-zinc-800/40" />
+                    <div className="h-px w-full bg-zinc-800/40" />
 
-                <div className="space-y-4">
-                  <div className="flex flex-col gap-2">
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
-                      Geospatial Position
-                    </span>
-                    <div className="rounded border border-zinc-800/50 bg-zinc-950/50 p-3">
-                      <span className="text-[10px] font-mono text-emerald-500/80">
-                        {selectedEvent.geometry
-                          ? `${selectedEvent.geometry.latitude.toFixed(6)}°N, ${selectedEvent.geometry.longitude.toFixed(6)}°E`
-                          : "Position data inaccessible"}
-                      </span>
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-2">
+                        <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-[0.15em]">
+                          Geospatial Position
+                        </span>
+                        <div className="rounded border border-zinc-800/50 bg-zinc-950/50 p-3">
+                          <span className="text-[10px] font-mono text-emerald-500/80">
+                            {selectedEvent.geometry
+                              ? `${selectedEvent.geometry.latitude.toFixed(6)}°N, ${selectedEvent.geometry.longitude.toFixed(6)}°E`
+                              : "Position data inaccessible"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()
             ) : (
               <div className="flex h-full flex-col items-center justify-center text-center space-y-6">
                 <div className="h-px w-6 bg-zinc-800" />
@@ -531,9 +619,51 @@ export default function DashboardPage() {
   );
 }
 
-function getSeverityColor(severity: number): string {
-  if (severity >= 4) return "bg-rose-500 shadow-[0_0_4px_rgba(244,63,94,0.5)]";
-  if (severity >= 2)
-    return "bg-amber-500 shadow-[0_0_4px_rgba(245,158,11,0.5)]";
-  return "bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.5)]";
+type SeverityTone = {
+  dotClass: string;
+  markerClass: string;
+  markerSizeClass: string;
+  badgeClass: string;
+  textClass: string;
+};
+
+function clampSeverityLevel(severity: number): 1 | 2 | 3 {
+  if (severity >= 3) return 3;
+  if (severity === 2) return 2;
+  return 1;
+}
+
+function getSeverityTone(severity: number): SeverityTone {
+  const level = clampSeverityLevel(severity);
+
+  if (level === 3) {
+    return {
+      dotClass: "bg-rose-500 shadow-[0_0_6px_rgba(244,63,94,0.6)]",
+      markerClass:
+        "bg-rose-500 border-rose-300/60 shadow-[0_0_10px_rgba(244,63,94,0.75)]",
+      markerSizeClass: "h-3.5 w-3.5",
+      badgeClass: "border-rose-400/50 bg-rose-500/15 text-rose-300",
+      textClass: "text-rose-300",
+    };
+  }
+
+  if (level === 2) {
+    return {
+      dotClass: "bg-amber-400 shadow-[0_0_5px_rgba(251,191,36,0.55)]",
+      markerClass:
+        "bg-amber-400 border-amber-200/60 shadow-[0_0_8px_rgba(251,191,36,0.6)]",
+      markerSizeClass: "h-3 w-3",
+      badgeClass: "border-amber-300/40 bg-amber-400/10 text-amber-200",
+      textClass: "text-amber-200",
+    };
+  }
+
+  return {
+    dotClass: "bg-emerald-500 shadow-[0_0_4px_rgba(16,185,129,0.45)]",
+    markerClass:
+      "bg-emerald-500 border-emerald-300/50 shadow-[0_0_6px_rgba(16,185,129,0.5)]",
+    markerSizeClass: "h-2.5 w-2.5",
+    badgeClass: "border-emerald-400/35 bg-emerald-500/10 text-emerald-200",
+    textClass: "text-emerald-200",
+  };
 }

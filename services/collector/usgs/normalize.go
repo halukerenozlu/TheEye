@@ -8,6 +8,7 @@ import (
 
 type NormalizedEvent struct {
 	ID        string
+	Category  string
 	Type      string
 	Title     string
 	Status    string
@@ -31,6 +32,7 @@ func NormalizeFeature(feature Feature) NormalizedEvent {
 
 	return NormalizedEvent{
 		ID:        fmt.Sprintf("usgs:%s", feature.ID),
+		Category:  "natural_disaster",
 		Type:      "earthquake",
 		Title:     feature.Properties.Title,
 		Status:    mapStatus(feature.Properties.Status),
@@ -68,20 +70,16 @@ func mapStatus(sourceStatus string) string {
 
 func mapSeverity(mag *float64) int {
 	if mag == nil {
-		return 0
+		return 1
 	}
 
 	switch {
-	case *mag >= 7.0:
-		return 5
-	case *mag >= 6.0:
-		return 4
-	case *mag >= 4.0:
-		return 3
-	case *mag >= 2.0:
+	case *mag <= 3.0:
+		return 1
+	case *mag <= 6.0:
 		return 2
 	default:
-		return 1
+		return 3
 	}
 }
 

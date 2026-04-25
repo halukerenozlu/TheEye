@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -40,14 +41,16 @@ type metaResponse struct {
 }
 
 type Event struct {
-	ID        string         `json:"id"`
-	Type      string         `json:"type"`
-	Title     string         `json:"title"`
-	Status    string         `json:"status"`
-	Severity  int            `json:"severity"`
-	StartedAt string         `json:"started_at"`
-	UpdatedAt string         `json:"updated_at"`
-	Geometry  *EventGeometry `json:"geometry,omitempty"`
+	ID            string         `json:"id"`
+	Category      string         `json:"category"`
+	Type          string         `json:"type"`
+	Title         string         `json:"title"`
+	Status        string         `json:"status"`
+	Severity      int            `json:"severity,omitempty"`
+	SeverityLevel int            `json:"severity_level"`
+	StartedAt     string         `json:"started_at"`
+	UpdatedAt     string         `json:"updated_at"`
+	Geometry      *EventGeometry `json:"geometry,omitempty"`
 }
 
 type EventGeometry struct {
@@ -66,6 +69,8 @@ type errorResponse struct {
 }
 
 var errEventNotFound = errors.New("event not found")
+
+var magnitudePrefixPattern = regexp.MustCompile(`(?i)^M\s*([-+]?\d+(?:\.\d+)?)`)
 
 type eventsReader interface {
 	ListEvents(ctx context.Context, query listEventsQuery) (eventsListResponse, error)
@@ -542,6 +547,7 @@ func newRouterWithEventsReader(cfg config, reader eventsReader) chi.Router {
 			return
 		}
 
+		resp = normalizeEventsListResponse(resp)
 		writeJSON(w, http.StatusOK, resp)
 	})
 
@@ -559,6 +565,7 @@ func newRouterWithEventsReader(cfg config, reader eventsReader) chi.Router {
 			return
 		}
 
+		event = normalizeEvent(event)
 		writeJSON(w, http.StatusOK, event)
 	})
 
@@ -699,6 +706,82 @@ func applyEventGeometry(event *Event, longitude sql.NullFloat64, latitude sql.Nu
 	event.Geometry = &EventGeometry{
 		Longitude: longitude.Float64,
 		Latitude:  latitude.Float64,
+	}
+}
+
+func normalizeEventsListResponse(resp eventsListResponse) eventsListResponse {
+	for i := range resp.Items {
+		resp.Items[i] = normalizeEvent(resp.Items[i])
+	}
+
+	return resp
+}
+
+func normalizeEvent(event Event) Event {
+	event.Category = normalizeCategory(event.Category, event.Type)
+	event.SeverityLevel = normalizeSeverityLevel(event.Severity, event.Title)
+
+	// Keep the legacy field aligned during the contract transition so the
+	// existing dashboard flow keeps working while frontend moves to severity_level.
+	event.Severity = event.SeverityLevel
+
+	return event
+}
+
+func normalizeCategory(category, eventType string) string {
+	if strings.TrimSpace(category) != "" {
+		return category
+	}
+
+	switch strings.TrimSpace(eventType) {
+	case "earthquake":
+		return "natural_disaster"
+	default:
+		return ""
+	}
+}
+
+func normalizeSeverityLevel(storedSeverity int, title string) int {
+	if magnitude, ok := extractMagnitudeFromTitle(title); ok {
+		return severityLevelFromMagnitude(magnitude)
+	}
+
+	return normalizeStoredSeverityLevel(storedSeverity)
+}
+
+func extractMagnitudeFromTitle(title string) (float64, bool) {
+	matches := magnitudePrefixPattern.FindStringSubmatch(strings.TrimSpace(title))
+	if len(matches) != 2 {
+		return 0, false
+	}
+
+	magnitude, err := strconv.ParseFloat(matches[1], 64)
+	if err != nil {
+		return 0, false
+	}
+
+	return magnitude, true
+}
+
+func severityLevelFromMagnitude(magnitude float64) int {
+	switch {
+	case magnitude <= 3.0:
+		return 1
+	case magnitude <= 6.0:
+		return 2
+	default:
+		return 3
+	}
+}
+
+func normalizeStoredSeverityLevel(storedSeverity int) int {
+	switch {
+	case storedSeverity <= 1:
+		return 1
+	case storedSeverity == 2:
+		return 2
+	default:
+		return 3
 	}
 }
 

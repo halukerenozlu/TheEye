@@ -14,7 +14,9 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<EventsLis
 
   const url = `${API_BASE_URL}/v1/events?${query.toString()}`;
   
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new Error(`failed to fetch events: ${response.statusText}`);
   }
@@ -25,7 +27,9 @@ export async function fetchEvents(filters: EventFilters = {}): Promise<EventsLis
 export async function fetchEventDetail(id: string): Promise<Event> {
   const url = `${API_BASE_URL}/v1/events/${id}`;
   
-  const response = await fetch(url);
+  const response = await fetch(url, {
+    cache: "no-store",
+  });
   if (!response.ok) {
     throw new Error(`failed to fetch event detail for ${id}: ${response.statusText}`);
   }

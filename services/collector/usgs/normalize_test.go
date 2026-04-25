@@ -36,6 +36,9 @@ func TestNormalizeFeatureTypeAndTitleMapping(t *testing.T) {
 	}
 
 	got := NormalizeFeature(feature)
+	if got.Category != "natural_disaster" {
+		t.Fatalf("category = %q, want %q", got.Category, "natural_disaster")
+	}
 	if got.Type != "earthquake" {
 		t.Fatalf("type = %q, want %q", got.Type, "earthquake")
 	}
@@ -100,12 +103,15 @@ func TestNormalizeFeatureSeverityMapping(t *testing.T) {
 		mag  *float64
 		want int
 	}{
-		{name: "nil", mag: nil, want: 0},
-		{name: "low", mag: ptrFloat64(1.9), want: 1},
-		{name: "moderate", mag: ptrFloat64(2.0), want: 2},
-		{name: "strong", mag: ptrFloat64(4.0), want: 3},
-		{name: "major", mag: ptrFloat64(6.0), want: 4},
-		{name: "great", mag: ptrFloat64(7.0), want: 5},
+		{name: "nil defaults to level 1", mag: nil, want: 1},
+		{name: "below lower bound clamps to level 1", mag: ptrFloat64(0.4), want: 1},
+		{name: "lower bound", mag: ptrFloat64(1.0), want: 1},
+		{name: "upper bound level 1", mag: ptrFloat64(3.0), want: 1},
+		{name: "level 2", mag: ptrFloat64(3.1), want: 2},
+		{name: "upper bound level 2", mag: ptrFloat64(6.0), want: 2},
+		{name: "level 3", mag: ptrFloat64(6.1), want: 3},
+		{name: "upper bound level 3", mag: ptrFloat64(11.0), want: 3},
+		{name: "above upper bound clamps to level 3", mag: ptrFloat64(12.5), want: 3},
 	}
 
 	for _, tt := range tests {
