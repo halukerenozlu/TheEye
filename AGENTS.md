@@ -1,19 +1,13 @@
-# AGENTS.md — TheEye Repository Rules
+# AGENTS.md - TheEye Repository Rules
 
 > Read this file **first** before making any code changes.
 > This repository is designed for controlled work across humans, Codex, Gemini, Claude Code, and ChatGPT.
 
 ## 0) Project Summary
 
-**TheEye** is a near real-time, map-first world monitoring platform.
+**TheEye** is a near real-time, map-first global signal platform.
 
-Primary signal categories include:
-
-- earthquakes
-- wildfires
-- storms
-- flights
-- traffic incidents
+Natural and physical events are the current first signal family, but the long-term direction is broader: human systems, global stability, critical infrastructure, and other critical world signals may enter later through controlled version milestones.
 
 Core UX:
 
@@ -62,7 +56,7 @@ Core UX:
 
 - Go
 - minimal HTTP router
-- SSE (Server-Sent Events) for MVP realtime
+- SSE planned later, not active in the current baseline
 - PostgreSQL + PostGIS
 - Redis
 
@@ -84,10 +78,18 @@ services/
   collector/      # Go ingestion workers/connectors
 
 shared/
-  schema/         # Shared event contracts and generated types
+  schema/         # Shared event contracts and generated types, if introduced
 
 infra/
   docker-compose.yml
+
+docs/
+  VISION.md
+  ROADMAP.md
+  VERSION_PLAN.md
+  ARCHITECTURE.md
+  API.md
+  DB.md
 ```
 
 Agents must not invent a fundamentally different layout without explicit approval.
@@ -96,15 +98,17 @@ Agents must not invent a fundamentally different layout without explicit approva
 
 ## 5) Source-of-Truth Data Model: `Event`
 
-All sources must normalize into the same `Event` structure.
+All sources must normalize into the same `Event` direction.
 
 ### Required fields
 
 - `id`
 - `type`
+- `category`
 - `title`
 - `status`
 - `severity`
+- `severity_level`
 - `started_at`
 - `updated_at`
 - `geometry`
@@ -125,7 +129,7 @@ Database uniqueness should enforce idempotent source ingestion using:
 
 ---
 
-## 6) API Contract (MVP)
+## 6) API Contract (Current Baseline)
 
 ### Health
 
@@ -137,14 +141,14 @@ Database uniqueness should enforce idempotent source ingestion using:
 
 - `GET /v1/events`
 - `GET /v1/events/{id}`
+
+### Planned Later
+
 - `GET /v1/events/changes`
-
-### Realtime
-
 - `GET /v1/stream/events` via SSE
+- alert or saved-view endpoints
 
-Once introduced, endpoints should remain stable.
-Breaking changes should prefer new versioned routes rather than silent mutation.
+Once introduced, endpoints should remain stable. Breaking changes should prefer new versioned routes rather than silent mutation.
 
 ---
 
@@ -161,7 +165,7 @@ This flow should remain compatible with the services required for the MVP, inclu
 - PostgreSQL / PostGIS
 - Redis
 - API
-- optional collector
+- collector
 
 Frontend should remain runnable with a single command such as:
 
@@ -201,7 +205,7 @@ Do not break Docker startup, service wiring, or the local-first workflow.
 
 ## 9) Performance and Reliability Baseline
 
-- use PostGIS indexes for geographic queries
+- use PostGIS indexes for geographic queries where applicable
 - cache hot paths in Redis where appropriate
 - rate limit inbound and outbound traffic where needed
 - keep collector writes idempotent
@@ -230,7 +234,35 @@ Minimum expectation for meaningful changes:
 
 ---
 
-## 12) Multi-Agent Role Separation
+## 12) Planning Model
+
+TheEye uses **Version Milestones**, not Phase/Sprint planning.
+
+All implementation work must map to:
+
+- Version Milestone
+- Work Item
+- Implementation Slice
+
+No coding work should begin unless the current version milestone and work item are explicit.
+
+Allowed:
+
+- work only on the accepted work item
+- make minimal supporting changes required by that slice
+- update docs needed to reflect accepted behavior
+
+Not allowed:
+
+- unrelated refactors
+- speculative optimization
+- hidden feature expansion
+- changing contracts casually
+- parallel redesign of product direction
+
+---
+
+## 13) Multi-Agent Role Separation
 
 ### Human
 
@@ -240,13 +272,14 @@ Responsible for:
 - priorities
 - approval or rejection
 - final tradeoff decisions
+- final smoke testing, commit, and tag decisions
 
 ### ChatGPT
 
 Responsible for:
 
 - architecture framing
-- roadmap / phase / sprint / step definition
+- roadmap / version milestone / work item definition
 - Codex prompt generation
 - Gemini prompt generation
 - Claude Code review prompt generation
@@ -266,7 +299,7 @@ Responsible for:
 - document sync at the end of accepted work
 - keeping scope tight
 
-Codex must not silently expand the sprint.
+Codex must not silently expand the active work item.
 
 ### Gemini
 
@@ -277,7 +310,7 @@ Primarily responsible for:
 - backend-aware integration checks before frontend coding
 - UI structure, component flow, and UX shaping within scope
 
-Gemini must not invent backend fields, response shapes, or new product scope.
+Gemini must not invent backend fields, response shapes, endpoints, or new product scope.
 
 ### Claude Code
 
@@ -286,7 +319,7 @@ Selective review agent.
 Responsible for:
 
 - final review on risky, milestone, or cross-cutting work
-- checking scope correctness
+- checking work item correctness
 - checking contract drift
 - identifying regressions and unnecessary complexity
 - suggesting minimal fixes only when necessary
@@ -295,7 +328,7 @@ Claude Code is **not** the primary implementer in this project.
 
 ---
 
-## 13) Implementation and Testing Responsibility
+## 14) Implementation and Testing Responsibility
 
 Whoever implements a scoped change is also responsible for the minimum necessary tests for that change.
 
@@ -303,7 +336,7 @@ Rules:
 
 - If Codex implements backend changes, Codex should also add or update the relevant backend tests and run them.
 - If Gemini implements frontend changes, Gemini should also add or update the relevant frontend tests and run them when practical.
-- The implementation agent should keep tests minimal, relevant, and scoped to the current step.
+- The implementation agent should keep tests minimal, relevant, and scoped to the current implementation slice.
 - Claude Code acts as a reviewer of implementation and test adequacy, not as the primary test author.
 - Human performs final smoke testing, approval, commit, and tag decisions.
 
@@ -311,11 +344,11 @@ This rule exists to keep implementation ownership and test ownership aligned, re
 
 ---
 
-## 14) Backend-First Integration Protocol
+## 15) Backend-First Integration Protocol
 
 When work touches the frontend/backend boundary, follow this order:
 
-1. ChatGPT defines the exact step and boundaries.
+1. ChatGPT defines the exact version milestone, work item, implementation slice, and boundaries.
 2. Codex implements the backend or contract-changing work first.
 3. Gemini reads the latest backend diff, docs, and contract.
 4. Gemini reports integration risks or frontend impact before frontend coding begins.
@@ -325,32 +358,6 @@ When work touches the frontend/backend boundary, follow this order:
 8. Codex syncs the docs last.
 
 This is the default integration path for TheEye.
-
----
-
-## 15) Step-Based Delivery Rule
-
-All implementation work must map to:
-
-- Phase
-- Sprint
-- Step
-
-No coding work should begin unless the current step is explicit.
-
-Allowed:
-
-- work only on the active step
-- minimal supporting changes required by that step
-- doc updates needed to reflect accepted behavior
-
-Not allowed:
-
-- unrelated refactors
-- speculative optimization
-- hidden feature expansion
-- changing contracts casually
-- parallel redesign of product direction
 
 ---
 
@@ -378,7 +385,7 @@ Preferred rule:
 - review is completed
 - **Codex updates the final documents last** to reflect the accepted state
 
-Do not leave backend, Docker, contract, or sprint status changes undocumented.
+Do not leave backend, Docker, contract, or milestone status changes undocumented.
 
 ---
 
@@ -391,24 +398,27 @@ Use milestone-based tags in the format:
 Rules:
 
 - commits are for normal progress
-- tags are for meaningful milestones
-- sprint progress alone usually does not justify a tag
-- phase completion is a strong candidate for a tag
+- tags are for meaningful version milestones
+- routine work item progress usually does not justify a tag
 - docs should be synced before tagging
+- version and tag rules live in `docs/VERSION_PLAN.md`
 
 ---
 
 ## 19) Source of Truth Order
 
-`VISION.md` defines long-term direction (north star), but active implementation scope is controlled by current phase and sprint documents.
+`docs/VISION.md` defines long-term direction, but active implementation scope is controlled by `docs/VERSION_PLAN.md` and the accepted work item.
 
 If documents conflict, follow this order:
 
 1. `AGENTS.md`
-2. `WORKFLOW.md`
-3. `VERSIONING.md`
-4. current phase document
-5. current sprint document
-6. code details
+2. `docs/VISION.md`
+3. `docs/VERSION_PLAN.md`
+4. `docs/ROADMAP.md`
+5. `docs/ARCHITECTURE.md`
+6. `docs/API.md`
+7. `docs/DB.md`
+8. `README.md`
+9. code
 
 The repository documentation wins over ad-hoc tool output.

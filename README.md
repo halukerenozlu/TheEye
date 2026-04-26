@@ -2,51 +2,47 @@
 
 TheEye is a **map-first global signal platform** built as a structured monorepo.
 
-The repository is designed to support disciplined product planning, scoped implementation, and controlled multi-agent collaboration without losing architectural clarity or breaking the local development flow.
+It exists to collect, normalize, and present meaningful world signals through one coherent event-driven experience. The current working baseline is **v0.1.0 - Initial Working MVP**: a local Docker-backed system with a Go API, USGS earthquake ingestion, stored normalized events, and a first map/feed/detail dashboard.
+
+The long-term product direction is broader than a natural disaster dashboard. Natural and physical events are the first practical signal family, but TheEye can evolve toward human systems, global stability, critical infrastructure, and other high-value world signals as reliable source boundaries emerge.
 
 ---
 
 ## Purpose
 
-TheEye exists to reduce fragmentation across world-signal sources by collecting, normalizing, and presenting them through one coherent event-driven experience.
+TheEye reduces fragmentation across world-signal sources by giving users one readable place to understand:
 
-In the near term, product delivery stays focused on a reliable multi-source event monitoring core: ingestion, normalization, storage, and a stable map/feed/detail workflow.
+- what is happening
+- where it is happening
+- why it matters
 
-Over the long term, TheEye can expand toward broader global-signal coverage, including carefully scoped human-system and global-stability-relevant signals, without sacrificing phase discipline.
+Near-term delivery stays focused on reliable multi-source event monitoring: ingestion, normalization, storage, API stability, and a map-first dashboard flow.
 
-Early signal categories include:
+Guiding principles:
 
-- earthquakes
-- wildfires
-- storms
-- flights
-- traffic incidents
-
-The guiding principle is simple:
-
-- **fast initial signal**
-- **map-first exploration**
-- **normalized event model**
-- **controlled, reviewable engineering**
-- **stable local development with Docker-based infrastructure**
-
-Vision note:
-
-- `VISION.md` is the north star for long-term direction.
-- active implementation scope is defined by current phase and sprint documents.
+- fast initial signal
+- map-first exploration
+- normalized event model
+- controlled, reviewable engineering
+- stable local development with Docker-based infrastructure
 
 ---
 
 ## Current Working Model
 
-TheEye now follows a **hybrid multi-agent workflow**:
+TheEye uses a controlled multi-agent workflow:
 
-- **ChatGPT** defines scope, prepares prompts, clarifies architecture, and keeps docs aligned.
+- **ChatGPT** defines scope, prepares prompts, clarifies architecture, and keeps planning aligned.
 - **Codex** is the primary implementation agent, especially for backend and repo-wide document sync.
 - **Gemini** is used mainly for frontend direction, UI structure, and backend-aware integration work.
-- **Claude Code** is used more selectively for final review, risky changes, and milestone-level validation.
+- **Claude Code** is used selectively for final review, risky changes, and milestone-level validation.
 
-This is intentional. The project should lean more heavily on **Codex + Gemini** and use **Claude Code** sparingly.
+Planning now follows **Version Milestones**, not Phase/Sprint documents.
+
+Current documented progress snapshot:
+
+- `docs/VERSION_PLAN.md`
+- `CHANGELOG.md`
 
 ---
 
@@ -56,21 +52,19 @@ Frontend work must follow the latest stabilized backend contract.
 
 When a change affects the frontend/backend boundary, use this order:
 
-1. ChatGPT defines the current phase, sprint, step, and constraints.
+1. Define the target version milestone, work item, implementation slice, and constraints.
 2. Codex implements or updates the backend slice first.
-3. Gemini reads the latest backend contract and reviews it for frontend integration impact.
+3. Gemini reads the latest backend contract and reviews frontend integration impact.
 4. Codex applies any required backend patch if Gemini finds contract or usability issues.
 5. Gemini implements the frontend against the latest backend behavior.
-6. Claude Code performs a selective final review for milestone, risky, or cross-cutting changes.
-7. Codex performs the final documentation sync if behavior or project state changed.
+6. Claude Code performs selective final review for milestone, risky, or cross-cutting changes.
+7. Codex performs final documentation sync if behavior or project state changed.
 
 This rule exists to reduce silent contract drift.
 
 ---
 
 ## Repository Structure
-
-> Keep the meaning of these areas stable even if the exact folder tree evolves.
 
 ```text
 TheEye/
@@ -82,96 +76,51 @@ TheEye/
 |- infra/
 |  |- docker-compose.yml          # Local infrastructure and service orchestration
 |- docs/
-|  |- ROADMAP.md
-|  |- phases/
-|  |  |- PHASE_01.md
-|  |  |- ...
-|  |- sprints/
-|  |  |- PHASE_02_SPRINT_01.md
-|  |  |- ...
+|  |- VISION.md                   # Long-term product north star
+|  |- ROADMAP.md                  # High-level version milestone roadmap
+|  |- VERSION_PLAN.md             # Active milestone plan and version rules
+|  |- ARCHITECTURE.md             # Current technical architecture
+|  |- API.md                      # Current API contract
+|  |- DB.md                       # Current persistence baseline and planned DB direction
 |- scripts/                       # Helper scripts
 |- README.md
 |- AGENTS.md
-|- WORKFLOW.md
-|- VERSIONING.md
-|- VISION.md
 |- GEMINI.md
 |- CLAUDE.md
+|- CHANGELOG.md
 ```
+
+---
+
 ## Document Map
 
-### `README.md`
-Use for:
+### `docs/VISION.md`
 
-- project overview
-- repository orientation
-- local setup basics
-- collaboration rules
-- current progress snapshot
+Use for long-term product meaning, MVP boundaries, and the broader map-first global signal direction.
 
-### `VISION.md`
-Use for:
+### `docs/VERSION_PLAN.md`
 
-- product meaning
-- MVP boundaries
-- long-term direction
-- what TheEye is and is not
+Use for active version milestone planning, version rules, completed v0.1.0 scope, and planned v0.2-v0.5 direction.
 
 ### `docs/ROADMAP.md`
-Use for:
 
-- phase sequence
-- milestone intent
-- long-term build order
+Use for high-level roadmap orientation. It should stay concise and should not become a detailed task list.
 
-### `docs/phases/PHASE_01.md`, `docs/phases/PHASE_02.md`, ...
-Use for:
+### `docs/ARCHITECTURE.md`
 
-- phase-specific goals
-- scope boundaries
-- exit criteria
-- current status
+Use for current system structure, service responsibilities, and ingestion-to-dashboard flow.
 
-### `docs/sprints/PHASE_02_SPRINT_01.md`, ...
-Use for:
+### `docs/API.md`
 
-- sprint goal
-- step breakdown
-- active and completed work inside the sprint
+Use for current backend API contract and planned-but-not-active API notes.
+
+### `docs/DB.md`
+
+Use for current event persistence behavior, idempotency rules, and planned database direction.
 
 ### `AGENTS.md`
-Use for:
 
-- source of truth engineering rules
-- stack and contract rules
-- local dev constraints
-- multi-agent coordination policy
-
-### `WORKFLOW.md`
-Use for:
-
-- exact delivery sequence
-- who does what and when
-- review and docs update order
-
-### `VERSIONING.md`
-Use for:
-
-- version and tag rules
-- milestone release discipline
-
-### `GEMINI.md`
-Use for:
-
-- Gemini-specific working agreement
-- frontend and integration workflow rules
-
-### `CLAUDE.md`
-Use for:
-
-- Claude Code review agreement
-- selective review expectations
-- output format for review results
+Use for source-of-truth engineering rules, stack and contract rules, local dev constraints, and multi-agent coordination policy.
 
 ---
 
@@ -180,25 +129,16 @@ Use for:
 If documents conflict, follow this priority:
 
 1. `AGENTS.md`
-2. `WORKFLOW.md`
-3. `VERSIONING.md`
-4. current phase document
-5. current sprint document
-6. `README.md`
-7. implementation details in code
+2. `docs/VISION.md`
+3. `docs/VERSION_PLAN.md`
+4. `docs/ROADMAP.md`
+5. `docs/ARCHITECTURE.md`
+6. `docs/API.md`
+7. `docs/DB.md`
+8. `README.md`
+9. code
 
 Implementation must follow the documented plan, not invent a new one.
-
----
-
-## Current Documented Progress Snapshot
-
-For up-to-date operational status, use:
-
-- docs/phases/PHASE_06.md
-- docs/sprints/PHASE_06_SPRINT_01.md
-
-Completed work should remain visible in project history, but implementation decisions should follow the latest active phase/sprint docs.
 
 ---
 
@@ -212,12 +152,12 @@ The local development flow must remain stable.
 docker compose -f ./infra/docker-compose.yml up --build
 ```
 
-This should remain the baseline entry point for local development and should continue to support backend-related services such as:
+This is the baseline entry point for local development and should continue to support:
 
 - PostgreSQL / PostGIS
 - Redis
 - API service
-- optional collector service
+- collector service
 
 ### Stop local stack
 
@@ -239,16 +179,16 @@ If repo-level shortcuts exist later through `Makefile` or scripts, keep them con
 
 A clean working loop for this repository is:
 
-1. confirm active phase, sprint, and step
+1. confirm the target version milestone, work item, and implementation slice
 2. clarify constraints with ChatGPT
 3. implement backend or contract-changing work with Codex
 4. let Gemini inspect the latest backend contract for frontend impact
 5. patch backend if needed
 6. implement frontend with Gemini only after the contract is stable
 7. use Claude Code selectively for final or risky review
-8. let Codex sync the docs last when state changed
+8. let Codex sync docs last when state changed
 9. commit a clean, scoped unit
-10. create a tag only after a meaningful milestone or completed phase
+10. create a tag only after a meaningful milestone
 
 ---
 
@@ -257,7 +197,7 @@ A clean working loop for this repository is:
 To avoid repo drift:
 
 - do not mix unrelated work in one change set
-- do not let agents silently expand the sprint scope
+- do not let agents silently expand the active work item
 - do not treat tool output as a project decision until reflected in docs
 - do not let frontend invent backend fields or endpoints
 - do not break the Docker-based local workflow
@@ -270,9 +210,8 @@ Tags should be milestone-based, not commit-based.
 
 Prefer creating tags when:
 
-- a phase is complete
-- a major milestone is approved
-- the docs are synced
+- a meaningful version milestone is complete
+- docs are synced
 - the working tree is clean
 - the result is reviewed and intentionally checkpointed
 
@@ -280,8 +219,6 @@ Prefer creating tags when:
 
 ## Final Note
 
-TheEye should not only be built correctly; it should be built in a way that remains understandable, traceable, and stable even when multiple AI tools are involved.
+TheEye should be built in a way that remains understandable, traceable, and stable even when multiple AI tools are involved.
 
 When in doubt, the documented project direction wins.
-
-

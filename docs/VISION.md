@@ -1,14 +1,12 @@
-# VISION.md
-
 # TheEye Vision
 
 ## What TheEye Is
 
 TheEye is a map-first global signal platform designed to help users observe meaningful world activity through a unified event-driven interface.
 
-Its long-term direction is not to become a simple natural disaster dashboard, but a layered world monitoring product that helps users understand critical signals, system stress, and global instability with geographic context.
+Its long-term direction is not to become a simple natural disaster dashboard. Natural and physical events are the first practical signal family, but the product can evolve into a layered world monitoring platform for critical signals, human systems, global stability, infrastructure stress, and operational disruption.
 
-In the near term, TheEye is built by collecting, normalizing, and presenting reliable multi-source events through one coherent monitoring experience.
+In the near term, TheEye is built by collecting, normalizing, storing, and presenting reliable multi-source events through one coherent monitoring experience.
 
 ---
 
@@ -50,11 +48,11 @@ Examples of future signal families may include:
 
 ### Current Product Reality
 
-The current product should remain grounded in reliable event ingestion, normalization, and map-based monitoring.
+The current product should remain grounded in reliable event ingestion, normalization, storage, and map-based monitoring.
 
 For the near-term roadmap, TheEye should first become a trustworthy multi-source world signal platform before attempting country intelligence, profiling, or cross-signal reasoning.
 
-Long-term vision should guide direction, but it must not override phase discipline.
+Long-term vision should guide direction, but it must not override version milestone discipline.
 
 ---
 
@@ -89,8 +87,7 @@ Geographic context is primary, not secondary.
 
 ### 3. Signal Over Noise
 
-TheEye should not show everything equally.
-It should favor meaningful signals, usable prioritization, and readable context over raw volume.
+TheEye should not show everything equally. It should favor meaningful signals, usable prioritization, and readable context over raw volume.
 
 ### 4. Event Normalization
 
@@ -98,12 +95,11 @@ Different sources should converge into one understandable event model wherever p
 
 ### 5. Practical Real-Time
 
-The MVP does not require perfect real-time.
-Near real-time is acceptable if the system is reliable, refreshable, and operationally trustworthy.
+The MVP does not require perfect real-time. Near real-time is acceptable if the system is reliable, refreshable, and operationally trustworthy.
 
 ### 6. Controlled Engineering
 
-The project should grow through disciplined, reviewable steps rather than chaotic feature expansion.
+The project should grow through disciplined, reviewable work items rather than chaotic feature expansion.
 
 ### 7. Backend-Led Contract Stability
 
@@ -132,7 +128,7 @@ The product surface should support that structure:
 This right-side panel may evolve over time, but it should do so gradually:
 
 1. selected event detail
-2. selected event + nearby or related active context
+2. selected event plus nearby or related active context
 3. limited country or regional context
 4. much later, richer intelligence or profiling layers
 
@@ -178,7 +174,7 @@ The first useful versions should:
 
 Near-term expansion should remain disciplined.
 
-For the next phases, TheEye should prioritize:
+TheEye should prioritize:
 
 - multi-source event reliability
 - source/category clarity
@@ -252,6 +248,6 @@ This document defines long-term product direction.
 
 It is a guiding north star, not a license for uncontrolled implementation.
 
-Active phase and sprint documents remain the operational source of truth for what is built now.
+Active implementation scope is controlled by `docs/VERSION_PLAN.md`, the current version milestone, and the accepted work item.
 
-TheEye should protect vision **and** discipline at the same time.
+TheEye should protect vision and discipline at the same time.

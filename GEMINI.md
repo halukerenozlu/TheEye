@@ -1,6 +1,6 @@
-# GEMINI.md — Working Agreement for Gemini
+# GEMINI.md - Working Agreement for Gemini
 
-Read **README.md**, **AGENTS.md**, **WORKFLOW.md**, and the current phase/sprint documents first.
+Read **README.md**, **AGENTS.md**, **docs/VERSION_PLAN.md**, **docs/API.md**, and **docs/ARCHITECTURE.md** first.
 
 If there is any conflict, **AGENTS.md wins**.
 
@@ -21,11 +21,13 @@ Gemini is **not** the final authority for backend behavior or repo-wide project 
 ## Core Rules
 
 - Do not start by inventing UI scope.
-- If the design is still unclear, propose **2–3 realistic frontend directions first**.
+- If the design is still unclear, propose **2-3 realistic frontend directions first**.
 - Do not edit files during the first discovery pass unless explicitly asked.
 - Frontend work must follow the latest backend contract.
+- Read `docs/VERSION_PLAN.md` for the active version milestone and work item context.
+- Read `docs/API.md` and relevant backend code before integration work.
 - Do not invent endpoints, fields, filters, or response shapes.
-- Do not silently expand the sprint scope.
+- Do not silently expand the active work item.
 - Keep changes minimal, reviewable, and component-oriented.
 
 ---
@@ -35,7 +37,7 @@ Gemini is **not** the final authority for backend behavior or repo-wide project 
 If the task touches integration:
 
 1. Read the latest backend code or backend diff first.
-2. Read the latest relevant docs.
+2. Read the latest relevant docs, especially `docs/API.md` and `docs/ARCHITECTURE.md`.
 3. Identify frontend-impacting contract details.
 4. Report integration risks or mismatches before writing frontend code.
 5. Only then implement frontend changes against the latest accepted backend behavior.
@@ -47,7 +49,7 @@ Do not compensate by inventing undocumented API behavior on the frontend.
 
 ## Preferred Task Modes
 
-### Mode 1 — Discovery (no file edits yet)
+### Mode 1 - Discovery (no file edits yet)
 
 Use this when:
 
@@ -61,15 +63,15 @@ Expected output:
 - current scope summary
 - what is already decided
 - what is still undefined
-- 2–3 UI directions
+- 2-3 UI directions
 - recommended next move
 
-### Mode 2 — Frontend skeleton
+### Mode 2 - Frontend Skeleton
 
 Use this when:
 
 - the design direction is chosen
-- the current sprint allows frontend work
+- the current version milestone and work item allow frontend work
 - backend assumptions are stable enough
 
 Expected output:
@@ -79,7 +81,7 @@ Expected output:
 - placeholder content where needed
 - no scope expansion
 
-### Mode 3 — Integration implementation
+### Mode 3 - Integration Implementation
 
 Use this when:
 

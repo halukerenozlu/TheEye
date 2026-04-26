@@ -1,179 +1,111 @@
-# ROADMAP.md
+# TheEye Roadmap
 
-## Vision
+## Direction
 
-TheEye aims to become a map-first global signal platform that collects, organizes, and presents meaningful signals through an event-driven product.
+TheEye is a map-first global signal platform that collects, normalizes, and presents meaningful world activity through one event-driven product.
 
-Near-term roadmap focus:
+The current baseline proves a natural/physical signal workflow through USGS earthquakes. Future versions can broaden toward additional natural sources first, then carefully evaluated context enrichment and, later, human-system or global-stability signals.
 
-- reliable multi-source event ingestion and normalization
-- stable map + feed + detail monitoring flow
-- disciplined delivery through active phase/sprint scope
-
-Long-term north star:
-
-- gradual expansion from natural/physical events toward broader global signals
-- eventual inclusion of carefully scoped human-system and global-stability signals
-
-Long-term direction should guide prioritization, but active implementation scope remains phase/sprint-driven.
+The roadmap is now organized by **Version Milestones**. Detailed tasks belong in `docs/VERSION_PLAN.md`; this file stays high-level.
 
 ---
 
-## Current Planning Status
+## v0.1 - Initial Working MVP
 
-- **Current active phase:** Phase 6 - Signal Expansion Foundation
-- **Current active sprint:** Sprint 1 - Reliability and Contract Foundation (Completed)
-- **Current active step:** None (Sprint completed)
+Status: Completed
 
-For current implementation boundaries, follow:
+v0.1 establishes the first useful end-to-end baseline:
 
-- `docs/phases/PHASE_06.md`
-- `docs/sprints/PHASE_06_SPRINT_01.md`
-
----
-
-## Phase 0 — Foundation
-
-**Status:** Completed
-
-**Goal:**
-
-- repository structure
-- infra baseline
-- local development workflow
-- scripts and docs hygiene
-
----
-
-## Phase 1 — Product Definition and Domain Model
-
-**Status:** Completed
-
-**Goal:**
-
-- define product scope
-- define user scenarios
-- define MVP boundaries
-- define domain entities and database draft
-
+- documented map-first global signal vision
+- Go API service skeleton
+- health, readiness, and metadata endpoints
+- normalized Event response model baseline
+- consistent JSON error shape
+- USGS earthquake ingestion
+- deterministic normalization
+- duplicate-safe persistence
+- idempotency through `source_name + source_event_id`
+- real stored event list and detail endpoints
+- filter, sort, and pagination support
+- first dashboard shell
+- Signal Feed connected to `/v1/events`
+- MapLibre rendering and geometry-based markers
+- feed/map/detail selection sync
+- polling and freshness visibility
+- backend-owned `severity_level`
+- normalized `category`
+- Level 1 / Level 2 / Level 3 visual distinction
 
 ---
 
-## Phase 2 — Backend Foundation
+## v0.2 - Multi-source Event Foundation
 
-**Status:** Completed
+Status: Next
 
-**Goal:**
+v0.2 should add the second real source and make the ingestion/event model foundation source-independent enough to support a mixed feed and mixed map without breaking USGS.
 
-- application skeleton
-- configuration and health checks
-- database integration baseline
-- migration base
-- service boundaries
-- stable local Docker-backed flow for backend development
+Primary direction:
 
-
----
-
-## Phase 3 — First Ingestion Pipeline
-
-**Status:** Completed
-
-**Goal:**
-
-- ingest data from one source
-- normalize it
-- store it
-- avoid duplicates
-- establish the first usable data pipeline
-
+- second natural/physical source
+- source adapter boundary
+- multi-source-compatible Event behavior
+- clear category/type/source metadata
+- mixed feed/map baseline
 
 ---
 
-## Phase 4 — API Layer
+## v0.3 - Context and Enrichment Foundation
 
-**Status:** Completed
+Status: Planned
 
-**Goal:**
+v0.3 should define how event details can gain useful context without confusing enrichment with core ingestion.
 
-- event listing
-- event detail
-- filtering
-- sorting
-- pagination
+Primary direction:
 
-
----
-
-## Phase 5 — First Dashboard
-
-**Status:** Completed
-
-**Goal:**
-
-- map-first dashboard shell
-- list and feed views
-- filters
-- event detail UI
-- stable first user-facing interface
-
+- MCP or similar context integration evaluation
+- enrichment boundary
+- event detail context planning
+- API stability while context work matures
 
 ---
 
-## Phase 6 - Signal Expansion Foundation
+## v0.4 - Map-first Mixed Feed Experience
 
-**Status:** Active
+Status: Planned
 
-**Goal:**
+v0.4 should improve the user-facing experience for mixed-source monitoring.
 
-- stabilize the current single-source monitoring flow
-- establish backend contract reliability (`severity_level`, `category`)
-- run predictable polling + refresh behavior
-- keep collector-backed ingest reliable in local Docker flow
-- prepare a clean base for one next real source without scope drift
+Primary direction:
 
-
----
-
-## Phase 7 — Alerts and Management
-
-**Status:** Upcoming
-
-**Goal:**
-
-- alert rules
-- tracked topics or regions
-- basic admin capabilities
-
+- source/category/type filters
+- mixed feed readability
+- marker behavior improvements
+- selected event detail improvements
+- freshness visibility
+- loading/empty/error polish
 
 ---
 
-## Phase 8 — Stabilization and Release Prep
+## v0.5 - Reliability and Signal Quality
 
-**Status:** Upcoming
+Status: Planned
 
-**Goal:**
+v0.5 should strengthen trust in source behavior, event freshness, duplicate handling, and prioritization.
 
-- performance checks
-- cleanup
-- hardening
-- demo readiness
-- release preparation
+Primary direction:
+
+- source confidence model draft
+- duplicate and near-duplicate handling
+- event freshness rules
+- severity/priority refinement
+- ingestion observability/logging baseline
 
 ---
 
-## Progress Visibility Rule
+## Roadmap Governance
 
-Completed phases should remain visible for historical clarity, but should not stay mixed into the active work mentally.
+Long-term vision lives in `docs/VISION.md`.
 
-Use:
+Active milestone planning and detailed work items live in `docs/VERSION_PLAN.md`.
 
-- active phase / sprint / step for current work
-- completed sections for historical reference
-- version tags only at meaningful checkpoints
-
-Vision/scope note:
-
-- `VISION.md` is the north star for long-term direction.
-- near-term build scope is controlled by active phase/sprint documents.
-
+The roadmap should not become a task tracker. It should explain sequence, intent, and product direction at a version milestone level.
