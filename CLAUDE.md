@@ -1,4 +1,4 @@
-# CLAUDE.md — Working Agreement for Claude Code
+# CLAUDE.md - Working Agreement for Claude Code
 
 Read **AGENTS.md** first. If there is any conflict, **AGENTS.md wins**.
 
@@ -22,8 +22,8 @@ Claude Code should behave like a reviewer, not a second primary implementer.
 
 Check these in order:
 
-1. Is the work inside the requested phase / sprint / step?
-2. Does it align with `AGENTS.md`, `WORKFLOW.md`, and the phase/sprint docs?
+1. Is the work inside the requested version milestone, work item, and implementation slice?
+2. Does it align with `AGENTS.md`, `docs/VERSION_PLAN.md`, and the relevant contract docs?
 3. Does it preserve the Docker and local development flow?
 4. Does it preserve the backend/frontend contract?
 5. Is the change minimal and reviewable?

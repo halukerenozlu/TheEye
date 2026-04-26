@@ -13,12 +13,12 @@ TheEye is built with a controlled, review-oriented workflow. Contributions shoul
 Please read these files first:
 
 1. `AGENTS.md`
-2. `WORKFLOW.md`
-3. `VERSIONING.md`
-4. `VISION.md`
-5. relevant docs under `docs/`
+2. `docs/VISION.md`
+3. `docs/VERSION_PLAN.md`
+4. `docs/ROADMAP.md`
+5. relevant contract docs under `docs/`
 
-If documents conflict, follow the priority defined in `WORKFLOW.md`.
+If documents conflict, follow the source-of-truth order defined in `AGENTS.md`.
 
 ---
 
@@ -27,7 +27,7 @@ If documents conflict, follow the priority defined in `WORKFLOW.md`.
 Contributions should be:
 
 - small and reviewable
-- aligned with the active phase / sprint / step
+- aligned with the active version milestone, work item, and implementation slice
 - consistent with the repository structure
 - minimal in scope
 - documented when behavior changes
@@ -45,7 +45,7 @@ Avoid:
 
 Typical contribution flow:
 
-1. identify the current phase / sprint / step
+1. identify the current version milestone, work item, and implementation slice
 2. make the smallest correct change
 3. verify locally
 4. keep changes reviewable
@@ -62,7 +62,7 @@ Examples:
 
 - `feat/api-events-placeholder`
 - `fix/meta-endpoint-shape`
-- `docs/phase-2-update`
+- `docs/version-plan-update`
 
 Do not work directly on `main` unless repository policy explicitly allows it.
 
@@ -76,7 +76,7 @@ Examples:
 
 - `feat(api): add placeholder event detail endpoint`
 - `fix(api): return structured not found response`
-- `docs: update phase 2 progress`
+- `docs: update version plan progress`
 
 Recommended prefixes:
 
