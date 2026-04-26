@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Event, EventFilters } from "../types";
 import { fetchEvents, fetchEventDetail } from "../lib/api";
+import { APP_VERSION } from "../generated/version";
 import maplibregl from "maplibre-gl";
 
 const EVENTS_POLL_INTERVAL_MS = 30000;
@@ -258,7 +259,8 @@ export default function DashboardPage() {
           </div>
           <div className="h-4 w-px bg-zinc-800" />
           <div className="text-[10px] font-medium text-zinc-500 uppercase tracking-widest">
-            World Monitoring <span className="mx-1 opacity-30">|</span> v0.3.0
+            World Monitoring <span className="mx-1 opacity-30">|</span>{" "}
+            <span className="normal-case">{APP_VERSION}</span>
           </div>
         </div>
 

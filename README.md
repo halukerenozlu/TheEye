@@ -212,6 +212,9 @@ Prefer creating tags when:
 
 - a meaningful version milestone is complete
 - docs are synced
+- `VERSION` matches the intended Git tag
+- generated UI version files are synced with `pnpm version:sync`
+- `pnpm version:check vMAJOR.MINOR.PATCH` passes
 - the working tree is clean
 - the result is reviewed and intentionally checkpointed
 

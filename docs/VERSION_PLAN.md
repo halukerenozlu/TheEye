@@ -42,6 +42,9 @@ Before tagging:
 - local Docker-based development flow should still work
 - frontend/backend integration should be stable if the boundary changed
 - key docs should be synced
+- root `VERSION` should match the intended Git tag
+- generated UI version files should be synced with `pnpm version:sync`
+- the intended tag should pass `pnpm version:check vMAJOR.MINOR.PATCH`
 - the working tree should be clean
 
 ---

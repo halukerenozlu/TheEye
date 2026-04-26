@@ -4,6 +4,8 @@
   "scripts": {
     "dev:dashboard": "pnpm --filter dashboard dev",
     "build:dashboard": "pnpm --filter dashboard build",
-    "lint:dashboard": "pnpm --filter dashboard lint"
+    "lint:dashboard": "pnpm --filter dashboard lint",
+    "version:sync": "node scripts/sync-version.mjs",
+    "version:check": "node scripts/check-version.mjs"
   }
 }
