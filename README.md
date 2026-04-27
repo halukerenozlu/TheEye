@@ -8,6 +8,9 @@ The long-term product direction is broader than a natural disaster dashboard. Na
 
 ---
 
+![TheEye Dashboard](./public/v0-1-0.png)
+v0.1.0 - Initial Working MVP
+
 ## Purpose
 
 TheEye reduces fragmentation across world-signal sources by giving users one readable place to understand:
