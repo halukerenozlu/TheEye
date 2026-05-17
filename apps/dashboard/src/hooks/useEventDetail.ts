@@ -15,7 +15,8 @@ export function useEventDetail(
 ): UseEventDetailResult {
   const { listForMerge, onMissingFromList } = options;
   const [detailEvent, setDetailEvent] = useState<Event | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [fetchingId, setFetchingId] = useState<string | null>(null);
+  const [failedId, setFailedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedId) {
@@ -23,16 +24,28 @@ export function useEventDetail(
     }
 
     let cancelled = false;
-    setIsLoading(true);
 
     (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+
+      setFetchingId(selectedId);
+      setFailedId(null);
+
       try {
         const detail = await fetchEventDetail(selectedId);
-        if (!cancelled) setDetailEvent(detail);
+        if (!cancelled) {
+          setDetailEvent(detail);
+        }
       } catch (err) {
         console.error("Failed to load event detail:", err);
+        if (!cancelled) {
+          setFailedId(selectedId);
+        }
       } finally {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setFetchingId((current) => (current === selectedId ? null : current));
+        }
       }
     })();
 
@@ -66,6 +79,11 @@ export function useEventDetail(
       geometry: fromList.geometry ?? detailEvent.geometry,
     };
   }, [detailEvent, listForMerge, selectedId]);
+
+  const isLoading =
+    selectedId !== null &&
+    failedId !== selectedId &&
+    (fetchingId === selectedId || detailEvent?.id !== selectedId);
 
   return { event, isLoading };
 }

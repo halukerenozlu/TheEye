@@ -60,8 +60,37 @@ export function useEvents(filters: EventFilters): UseEventsResult {
   );
 
   useEffect(() => {
-    void load();
-  }, [load]);
+    let cancelled = false;
+
+    (async () => {
+      await Promise.resolve();
+      if (cancelled) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const data = await fetchEvents(filters);
+        if (!cancelled) {
+          setItems(data.items);
+        }
+      } catch (err) {
+        console.error(err);
+
+        if (!cancelled && itemsCountRef.current === 0) {
+          setError("Failed to sync with signal intelligence");
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filters]);
 
   useEffect(() => {
     const poll = () => {
