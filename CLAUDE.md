@@ -1,6 +1,11 @@
 # CLAUDE.md - Working Agreement for Claude Code
 
-Read **AGENTS.md** first. If there is any conflict, **AGENTS.md wins**.
+Skill discovery note:
+
+- Read `AGENTS.md` before using project skills.
+- Check project skills under `.agents/skills`.
+- Treat `.agents/skills` files as usable skill instructions.
+- If a capability seems missing, inspect `.agents/skills` before deciding.
 
 ## Role in This Project
 
