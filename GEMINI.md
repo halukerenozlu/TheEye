@@ -143,4 +143,11 @@ pnpm --filter dashboard dev
 docker compose -f ./infra/docker-compose.yml up --build
 ```
 
+## Skill discovery note
+
+- Read `AGENTS.md` before using project skills.
+- Check project skills under `.agents/skills`.
+- Treat `.agents/skills` files as usable skill instructions.
+- If a capability seems missing, inspect `.agents/skills` before deciding.
+
 Use the current repo commands if they are more specific, but do not break the Docker-first local workflow.

@@ -1,12 +1,5 @@
 # CLAUDE.md - Working Agreement for Claude Code
 
-Skill discovery note:
-
-- Read `AGENTS.md` before using project skills.
-- Check project skills under `.agents/skills`.
-- Treat `.agents/skills` files as usable skill instructions.
-- If a capability seems missing, inspect `.agents/skills` before deciding.
-
 ## Role in This Project
 
 Claude Code is used **selectively**, not as the primary development agent.
@@ -97,5 +90,12 @@ docker compose -f ./infra/docker-compose.yml up --build
 ```bash
 docker compose -f ./infra/docker-compose.yml down
 ```
+
+## Skill discovery note
+
+- Read `AGENTS.md` before using project skills.
+- Check project skills under `.agents/skills`.
+- Treat `.agents/skills` files as usable skill instructions.
+- If a capability seems missing, inspect `.agents/skills` before deciding.
 
 Use current repo-specific commands if they exist, but do not break the baseline local Docker flow.
