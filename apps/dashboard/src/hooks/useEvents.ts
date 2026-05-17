@@ -28,6 +28,8 @@ export function useEvents(filters: EventFilters): UseEventsResult {
 
   const load = useCallback(
     async (options?: { background?: boolean }) => {
+      await Promise.resolve();
+
       const isBackgroundRefresh = options?.background ?? false;
 
       if (isBackgroundRefresh) {

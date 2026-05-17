@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Event } from "../types";
 import { fetchEventDetail } from "../lib/api";
 
@@ -14,12 +14,11 @@ export function useEventDetail(
   options: { listForMerge: Event[]; onMissingFromList?: () => void },
 ): UseEventDetailResult {
   const { listForMerge, onMissingFromList } = options;
-  const [event, setEvent] = useState<Event | null>(null);
+  const [detailEvent, setDetailEvent] = useState<Event | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (!selectedId) {
-      setEvent(null);
       return;
     }
 
@@ -29,7 +28,7 @@ export function useEventDetail(
     (async () => {
       try {
         const detail = await fetchEventDetail(selectedId);
-        if (!cancelled) setEvent(detail);
+        if (!cancelled) setDetailEvent(detail);
       } catch (err) {
         console.error("Failed to load event detail:", err);
       } finally {
@@ -51,16 +50,22 @@ export function useEventDetail(
       onMissingFromList?.();
       return;
     }
-
-    setEvent((current) => {
-      if (!current || current.id !== selectedId) return current;
-      return {
-        ...current,
-        ...fromList,
-        geometry: fromList.geometry ?? current.geometry,
-      };
-    });
   }, [listForMerge, selectedId, onMissingFromList]);
+
+  const event = useMemo(() => {
+    if (!selectedId || !detailEvent || detailEvent.id !== selectedId) {
+      return null;
+    }
+
+    const fromList = listForMerge.find((item) => item.id === selectedId);
+    if (!fromList) return detailEvent;
+
+    return {
+      ...detailEvent,
+      ...fromList,
+      geometry: fromList.geometry ?? detailEvent.geometry,
+    };
+  }, [detailEvent, listForMerge, selectedId]);
 
   return { event, isLoading };
 }
