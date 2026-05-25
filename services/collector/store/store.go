@@ -1,4 +1,4 @@
-package usgs
+package store
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"theeye/services/collector/models"
 )
 
 type execer interface {
@@ -16,7 +18,7 @@ type Store struct {
 	db execer
 }
 
-func NewStore(db execer) *Store {
+func New(db execer) *Store {
 	return &Store{db: db}
 }
 
@@ -55,7 +57,7 @@ CREATE TABLE IF NOT EXISTS ingested_events (
 	return nil
 }
 
-func (s *Store) UpsertNormalizedEvents(ctx context.Context, events []NormalizedEvent) (int, error) {
+func (s *Store) UpsertNormalizedEvents(ctx context.Context, events []models.NormalizedEvent) (int, error) {
 	if len(events) == 0 {
 		return 0, nil
 	}
@@ -88,7 +90,7 @@ ON CONFLICT (source_name, source_event_id) DO UPDATE SET
   ingested_at = NOW();`
 
 	for _, event := range unique {
-		sourceEventID, err := sourceEventIDFromNormalizedID(event.ID)
+		sourceName, sourceEventID, err := sourceIdentity(event)
 		if err != nil {
 			return 0, err
 		}
@@ -106,7 +108,7 @@ ON CONFLICT (source_name, source_event_id) DO UPDATE SET
 		if _, err := s.db.ExecContext(
 			ctx,
 			upsert,
-			"usgs",
+			sourceName,
 			sourceEventID,
 			event.ID,
 			event.Type,
@@ -125,8 +127,8 @@ ON CONFLICT (source_name, source_event_id) DO UPDATE SET
 	return len(unique), nil
 }
 
-func deduplicateNormalizedEvents(events []NormalizedEvent) []NormalizedEvent {
-	unique := make([]NormalizedEvent, 0, len(events))
+func deduplicateNormalizedEvents(events []models.NormalizedEvent) []models.NormalizedEvent {
+	unique := make([]models.NormalizedEvent, 0, len(events))
 	seen := make(map[string]struct{}, len(events))
 
 	for _, event := range events {
@@ -141,8 +143,33 @@ func deduplicateNormalizedEvents(events []NormalizedEvent) []NormalizedEvent {
 	return unique
 }
 
-func sourceEventIDFromNormalizedID(normalizedID string) (string, error) {
-	const prefix = "usgs:"
+func sourceIdentity(event models.NormalizedEvent) (string, string, error) {
+	sourceName := strings.TrimSpace(event.Source)
+	if sourceName == "" {
+		sourceName = sourceNameFromNormalizedID(event.ID)
+	}
+	if sourceName == "" {
+		return "", "", fmt.Errorf("normalized event %q has empty source", event.ID)
+	}
+
+	sourceEventID, err := sourceEventIDFromNormalizedID(event.ID, sourceName)
+	if err != nil {
+		return "", "", err
+	}
+
+	return sourceName, sourceEventID, nil
+}
+
+func sourceNameFromNormalizedID(normalizedID string) string {
+	sourceName, _, ok := strings.Cut(normalizedID, ":")
+	if !ok {
+		return ""
+	}
+	return sourceName
+}
+
+func sourceEventIDFromNormalizedID(normalizedID string, sourceName string) (string, error) {
+	prefix := sourceName + ":"
 	if !strings.HasPrefix(normalizedID, prefix) {
 		return "", fmt.Errorf("normalized id %q must start with %q", normalizedID, prefix)
 	}

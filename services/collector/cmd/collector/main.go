@@ -13,15 +13,19 @@ import (
 
 	_ "github.com/lib/pq"
 
+	collector "theeye/services/collector"
+	"theeye/services/collector/eonet"
+	"theeye/services/collector/store"
 	"theeye/services/collector/usgs"
 )
 
 const defaultInterval = 5 * time.Minute
 
 type config struct {
-	DatabaseURL string
-	FeedURL     string
-	Interval    time.Duration
+	DatabaseURL  string
+	USGSFeedURL  string
+	EONETFeedURL string
+	Interval     time.Duration
 }
 
 func main() {
@@ -57,9 +61,10 @@ func loadConfig() (config, error) {
 	}
 
 	return config{
-		DatabaseURL: databaseURL,
-		FeedURL:     os.Getenv("USGS_FEED_URL"),
-		Interval:    interval,
+		DatabaseURL:  databaseURL,
+		USGSFeedURL:  os.Getenv("USGS_FEED_URL"),
+		EONETFeedURL: os.Getenv("EONET_FEED_URL"),
+		Interval:     interval,
 	}, nil
 }
 
@@ -84,7 +89,7 @@ func run(ctx context.Context, cfg config) error {
 
 func runAndLog(ctx context.Context, cfg config) {
 	if err := runOnce(ctx, cfg); err != nil {
-		log.Printf("USGS ingest failed: %v", err)
+		log.Printf("collector ingest failed: %v", err)
 	}
 }
 
@@ -102,24 +107,29 @@ func runOnce(parent context.Context, cfg config) error {
 		return fmt.Errorf("ping database: %w", err)
 	}
 
-	store := usgs.NewStore(db)
-	if err := store.EnsureSchema(ctx); err != nil {
+	eventStore := store.New(db)
+	if err := eventStore.EnsureSchema(ctx); err != nil {
 		return err
 	}
 
-	client := usgs.NewClient(cfg.FeedURL, &http.Client{Timeout: 10 * time.Second})
-
-	feed, err := client.Fetch(ctx)
-	if err != nil {
-		return err
+	sources := []collector.Source{
+		usgs.NewSource(cfg.USGSFeedURL, &http.Client{Timeout: 10 * time.Second}),
+		eonet.NewSource(cfg.EONETFeedURL, &http.Client{Timeout: 10 * time.Second}),
 	}
 
-	events := usgs.NormalizeFeatures(feed.Features)
-	written, err := store.UpsertNormalizedEvents(ctx, events)
-	if err != nil {
-		return err
+	for _, src := range sources {
+		events, err := src.Fetch(ctx)
+		if err != nil {
+			return fmt.Errorf("%s ingest fetch: %w", src.Name(), err)
+		}
+
+		written, err := eventStore.UpsertNormalizedEvents(ctx, events)
+		if err != nil {
+			return fmt.Errorf("%s ingest store: %w", src.Name(), err)
+		}
+
+		log.Printf("ingested %d/%d %s events", written, len(events), src.Name())
 	}
 
-	log.Printf("ingested %d/%d USGS events", written, len(events))
 	return nil
 }

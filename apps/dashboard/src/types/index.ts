@@ -13,7 +13,7 @@ export interface Event {
   type: string;
   title: string;
   status: string;
-  severity: number;
+  severity?: number | null;
   started_at: string;
   updated_at: string;
   geometry?: EventGeometry;

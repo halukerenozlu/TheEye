@@ -10,7 +10,9 @@ type FilterOption = {
 const FILTER_OPTIONS: FilterOption[] = [
   { label: "All Categories", value: "" },
   { label: "Earthquakes", value: "earthquake" },
-  { label: "Wildfires", value: "wildfire" },
+  { label: "Wildfires", value: "wildfires" },
+  { label: "Volcanoes", value: "volcanoes" },
+  { label: "Sea/Lake Ice", value: "seaLakeIce" },
   { label: "Storms", value: "storm" },
 ];
 
@@ -24,6 +26,9 @@ export function SignalFeedFilter({
   onChange,
 }: SignalFeedFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const selectedOption = FILTER_OPTIONS.find(
+    (option) => option.value === (selectedType ?? ""),
+  );
 
   return (
     <div className="border-t border-zinc-800/50 p-3 bg-zinc-950/40 relative">
@@ -32,7 +37,7 @@ export function SignalFeedFilter({
         className="flex h-7 w-full items-center justify-between rounded border border-zinc-800 bg-zinc-900/50 px-2 text-[9px] text-zinc-400 uppercase tracking-widest outline-none hover:border-zinc-700 transition-colors"
       >
         <span className="truncate">
-          {selectedType ? selectedType + "s" : "All Categories"}
+          {selectedOption?.label ?? selectedType ?? "All Categories"}
         </span>
         <svg
           width="10"

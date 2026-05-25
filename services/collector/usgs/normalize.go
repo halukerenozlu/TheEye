@@ -4,34 +4,24 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"theeye/services/collector/models"
 )
 
-type NormalizedEvent struct {
-	ID        string
-	Category  string
-	Type      string
-	Title     string
-	Status    string
-	Severity  int
-	StartedAt string
-	UpdatedAt string
-	Longitude *float64
-	Latitude  *float64
-}
-
-func NormalizeFeatures(features []Feature) []NormalizedEvent {
-	out := make([]NormalizedEvent, 0, len(features))
+func NormalizeFeatures(features []Feature) []models.NormalizedEvent {
+	out := make([]models.NormalizedEvent, 0, len(features))
 	for _, f := range features {
 		out = append(out, NormalizeFeature(f))
 	}
 	return out
 }
 
-func NormalizeFeature(feature Feature) NormalizedEvent {
+func NormalizeFeature(feature Feature) models.NormalizedEvent {
 	longitude, latitude := normalizeCoordinates(feature.Geometry.Coordinates)
 
-	return NormalizedEvent{
+	return models.NormalizedEvent{
 		ID:        fmt.Sprintf("usgs:%s", feature.ID),
+		Source:    "usgs",
 		Category:  "natural_disaster",
 		Type:      "earthquake",
 		Title:     feature.Properties.Title,

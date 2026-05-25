@@ -8,13 +8,14 @@ export type SeverityTone = {
   textClass: string;
 };
 
-export function clampSeverityLevel(severity: number): SeverityLevel {
-  if (severity >= 3) return 3;
-  if (severity === 2) return 2;
+export function clampSeverityLevel(severity?: number | null): SeverityLevel {
+  const value = severity ?? 1;
+  if (value >= 3) return 3;
+  if (value === 2) return 2;
   return 1;
 }
 
-export function getSeverityTone(severity: number): SeverityTone {
+export function getSeverityTone(severity?: number | null): SeverityTone {
   const level = clampSeverityLevel(severity);
 
   if (level === 3) {

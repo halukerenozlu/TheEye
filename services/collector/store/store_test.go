@@ -1,4 +1,4 @@
-package usgs
+package store
 
 import (
 	"context"
@@ -6,6 +6,8 @@ import (
 	"errors"
 	"strings"
 	"testing"
+
+	"theeye/services/collector/models"
 )
 
 type execCall struct {
@@ -41,7 +43,7 @@ func (r fakeResult) RowsAffected() (int64, error) {
 
 func TestEnsureSchemaSuccess(t *testing.T) {
 	exec := &fakeExecer{}
-	store := NewStore(exec)
+	store := New(exec)
 
 	if err := store.EnsureSchema(context.Background()); err != nil {
 		t.Fatalf("EnsureSchema returned error: %v", err)
@@ -63,10 +65,11 @@ func TestEnsureSchemaSuccess(t *testing.T) {
 
 func TestUpsertNormalizedEventsSuccess(t *testing.T) {
 	exec := &fakeExecer{}
-	store := NewStore(exec)
-	events := []NormalizedEvent{
+	store := New(exec)
+	events := []models.NormalizedEvent{
 		{
 			ID:        "usgs:abc123",
+			Source:    "usgs",
 			Type:      "earthquake",
 			Title:     "M 3.4 - Test",
 			Status:    "confirmed",
@@ -102,9 +105,10 @@ func TestUpsertNormalizedEventsSuccess(t *testing.T) {
 
 func TestUpsertNormalizedEventsDuplicateSafeInBatch(t *testing.T) {
 	exec := &fakeExecer{}
-	store := NewStore(exec)
-	dupe := NormalizedEvent{
+	store := New(exec)
+	dupe := models.NormalizedEvent{
 		ID:        "usgs:dup-1",
+		Source:    "usgs",
 		Type:      "earthquake",
 		Title:     "duplicate",
 		Status:    "confirmed",
@@ -113,7 +117,7 @@ func TestUpsertNormalizedEventsDuplicateSafeInBatch(t *testing.T) {
 		UpdatedAt: "2023-11-14T22:13:21Z",
 	}
 
-	written, err := store.UpsertNormalizedEvents(context.Background(), []NormalizedEvent{dupe, dupe})
+	written, err := store.UpsertNormalizedEvents(context.Background(), []models.NormalizedEvent{dupe, dupe})
 	if err != nil {
 		t.Fatalf("UpsertNormalizedEvents returned error: %v", err)
 	}
@@ -128,10 +132,11 @@ func TestUpsertNormalizedEventsDuplicateSafeInBatch(t *testing.T) {
 
 func TestUpsertNormalizedEventsInvalidID(t *testing.T) {
 	exec := &fakeExecer{}
-	store := NewStore(exec)
-	events := []NormalizedEvent{
+	store := New(exec)
+	events := []models.NormalizedEvent{
 		{
 			ID:        "bad-id",
+			Source:    "usgs",
 			Type:      "earthquake",
 			Title:     "M 1.0 - Bad",
 			Status:    "unknown",
@@ -158,10 +163,11 @@ func TestUpsertNormalizedEventsDBError(t *testing.T) {
 		failAt: 1,
 		err:    errors.New("db unavailable"),
 	}
-	store := NewStore(exec)
-	events := []NormalizedEvent{
+	store := New(exec)
+	events := []models.NormalizedEvent{
 		{
 			ID:        "usgs:db-1",
+			Source:    "usgs",
 			Type:      "earthquake",
 			Title:     "M 1.1 - DB",
 			Status:    "preliminary",
