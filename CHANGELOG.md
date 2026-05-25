@@ -9,6 +9,21 @@ and this project follows [Semantic Versioning](https://semver.org/spec/v2.0.0.ht
 
 Future changes will be documented here.
 
+## [0.2.0] - Multi-Source Ingestion
+
+### Added
+
+- Source interface and adapter pattern introduced.
+- EONET added as second data source for `wildfires`, `volcanoes`, and `seaLakeIce`.
+- Shared store layer introduced.
+
+### Changed
+
+- Shared `NormalizedEvent` model moved to `collector/models`.
+- Schema alignment clarified around `source_name` and `type` columns.
+- Frontend EONET event types added to filter options.
+- Frontend severity null handling hardened.
+
 ## [0.1.0] - Initial Working MVP
 
 ### Added
