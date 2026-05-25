@@ -299,6 +299,11 @@ Responsible for:
 - document sync at the end of accepted work
 - keeping scope tight
 
+#### Active Skills
+
+- `supabase-postgres-best-practices` — DB (Database / Veritabanı) sorguları ve index stratejisi
+- `webapp-testing` — Frontend test coverage (Gemini aktif olana kadar)
+
 Codex must not silently expand the active work item.
 
 ### Gemini
