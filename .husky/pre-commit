@@ -1,0 +1,24 @@
+# Fast, staged-only checks. Anything slower than a few seconds belongs in CI,
+# not here -- a slow hook just teaches people to use --no-verify.
+
+# Go: reject unformatted files. Check only, never rewrite: the working copy may
+# hold unstaged edits that gofmt -w would silently pull into the commit.
+if command -v gofmt >/dev/null 2>&1; then
+  staged_go=$(git diff --cached --name-only --diff-filter=ACM -- '*.go')
+  if [ -n "$staged_go" ]; then
+    unformatted=$(gofmt -l $staged_go)
+    if [ -n "$unformatted" ]; then
+      echo "gofmt required for:"
+      echo "$unformatted"
+      exit 1
+    fi
+  fi
+fi
+
+# JS/TS: skip rather than fail when Node tooling is absent, so a Go-only or
+# docs-only contributor can still commit. CI remains the real gate.
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm exec lint-staged
+else
+  echo "pnpm not found; skipping JS/TS lint"
+fi

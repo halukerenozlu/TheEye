@@ -1,0 +1,6 @@
+# Skip rather than fail when Node tooling is absent (see pre-commit).
+if command -v pnpm >/dev/null 2>&1; then
+  pnpm exec commitlint --edit "$1"
+else
+  echo "pnpm not found; skipping commit message lint"
+fi

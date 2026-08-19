@@ -1,0 +1,7 @@
+# Normalize line endings: LF in the repository, LF in the working tree.
+# Required so shell scripts (git hooks, .agents/skills/**/*.sh) stay executable
+# on Windows checkouts where core.autocrlf is enabled.
+* text=auto eol=lf
+
+*.png binary
+*.ico binary
