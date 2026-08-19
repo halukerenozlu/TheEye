@@ -4,7 +4,7 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/services/api"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore"
@@ -17,10 +17,28 @@ updates:
           - "minor"
           - "patch"
 
-  - package-ecosystem: "npm"
-    directory: "/apps/dashboard"
+  - package-ecosystem: "gomod"
+    directory: "/services/collector"
     schedule:
       interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore"
+    groups:
+      collector-minor-patch:
+        applies-to: version-updates
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+
+  # Workspace root: pnpm-lock.yaml lives here, so this entry covers both the
+  # root devDependencies and apps/dashboard in one resolution pass.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore"
@@ -32,11 +50,20 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # eslint 10 is blocked upstream: eslint-config-next still bundles an
+      # eslint-plugin-react that calls ESLint 9's removed context API
+      # ("contextOrFilename.getFilename is not a function").
+      - dependency-name: "eslint"
+        update-types: ["version-update:semver-major"]
+      # @types/node major must track the Node runtime, which CI pins to 22.
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
+      interval: "monthly"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "chore"
