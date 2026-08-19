@@ -1,6 +1,7 @@
 {
   "name": "theeye",
   "private": true,
+  "packageManager": "pnpm@10.15.1",
   "scripts": {
     "dev:dashboard": "pnpm --filter dashboard dev",
     "build:dashboard": "pnpm --filter dashboard build",
