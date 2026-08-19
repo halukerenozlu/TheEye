@@ -34,6 +34,9 @@ Thumbs.db
 .vscode/
 .idea/
 
+# --- Agent tooling (share the config, keep personal overrides local) ---
+.claude/settings.local.json
+
 # --- Local transient debug artifacts ---
 .codex-*/
 theeye-live-dashboard*.png

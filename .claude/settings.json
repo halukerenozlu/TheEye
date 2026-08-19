@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(go test:*)",
+      "Bash(go vet:*)",
+      "Bash(go build:*)",
+      "Bash(go mod download:*)",
+      "Bash(gofmt -l:*)",
+      "Bash(gofmt -d:*)",
+
+      "Bash(pnpm install:*)",
+      "Bash(pnpm --filter dashboard lint:*)",
+      "Bash(pnpm --filter dashboard typecheck:*)",
+      "Bash(pnpm --filter dashboard test:*)",
+      "Bash(pnpm --filter dashboard build:*)",
+      "Bash(pnpm exec commitlint:*)",
+      "Bash(pnpm why:*)",
+
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git ls-files:*)",
+      "Bash(git fetch:*)",
+
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
+    ]
+  }
+}
