@@ -79,5 +79,11 @@ jobs:
       - name: Lint
         run: pnpm --filter dashboard lint
 
+      - name: Typecheck
+        run: pnpm --filter dashboard typecheck
+
+      - name: Test
+        run: pnpm --filter dashboard test
+
       - name: Build
         run: pnpm --filter dashboard build
