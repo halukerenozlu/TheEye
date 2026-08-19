@@ -1,7 +1,8 @@
 # AGENTS.md - TheEye Repository Rules
 
 > Read this file **first** before making any code changes.
-> This repository is designed for controlled work across humans, Codex, Gemini, Claude Code, and ChatGPT.
+> These rules are model-agnostic. They apply to every contributor, human or agent,
+> regardless of which tool or model is used.
 
 ## 0) Project Summary
 
@@ -63,11 +64,12 @@ Core UX:
 ### Dev / Infra
 
 - Docker + Docker Compose
-- GitHub Actions for CI later
+- pnpm workspaces
+- GitHub Actions
 
 ---
 
-## 4) Repository Layout (Target)
+## 4) Repository Layout
 
 ```text
 apps/
@@ -78,10 +80,13 @@ services/
   collector/      # Go ingestion workers/connectors
 
 shared/
-  schema/         # Shared event contracts and generated types, if introduced
+  schema/         # Shared event contracts and generated types (planned, not present yet)
 
 infra/
   docker-compose.yml
+  .env.example
+
+scripts/          # Local helper scripts (PowerShell + Node)
 
 docs/
   VISION.md
@@ -90,9 +95,13 @@ docs/
   ARCHITECTURE.md
   API.md
   DB.md
+
+.agents/skills/   # Vendored agent skills, pinned in skills-lock.json
+.claude/          # Claude Code permissions and slash commands
+.github/          # CI workflows and Dependabot config
 ```
 
-Agents must not invent a fundamentally different layout without explicit approval.
+Do not invent a fundamentally different layout without explicit approval.
 
 ---
 
@@ -173,6 +182,8 @@ Frontend should remain runnable with a single command such as:
 pnpm --filter dashboard dev
 ```
 
+Compose values are parameterized with defaults, so the stack starts without a `.env`. Copy `infra/.env.example` to `infra/.env` only when you need to override something.
+
 Do not break Docker startup, service wiring, or the local-first workflow.
 
 ---
@@ -216,7 +227,7 @@ Do not break Docker startup, service wiring, or the local-first workflow.
 ## 10) Security and Secrets
 
 - never commit secrets
-- keep `.env.example` current
+- keep `infra/.env.example` current
 - validate all query parameters
 - keep local and shared config explicit
 
@@ -262,74 +273,71 @@ Not allowed:
 
 ---
 
-## 13) Multi-Agent Role Separation
+## 13) Working Principles
 
-### Human
+Adapted from [multica-ai/andrej-karpathy-skills](https://github.com/multica-ai/andrej-karpathy-skills),
+derived from Andrej Karpathy's observations on LLM coding pitfalls.
 
-Responsible for:
+> **Tradeoff:** these bias toward caution over speed. For trivial tasks, use judgment.
 
-- product direction
-- priorities
-- approval or rejection
-- final tradeoff decisions
-- final smoke testing, commit, and tag decisions
+### 13.1 Think Before Coding
 
-### ChatGPT
+**Don't assume. Don't hide confusion. Surface tradeoffs.**
 
-Responsible for:
+- State assumptions explicitly. If uncertain, **ask**.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, **stop**. Name what's confusing. Ask.
 
-- architecture framing
-- roadmap / version milestone / work item definition
-- Codex prompt generation
-- Gemini prompt generation
-- Claude Code review prompt generation
-- review interpretation
-- commit and tag suggestions
-- documentation alignment guidance
+### 13.2 Simplicity First
 
-### Codex
+**Minimum code that solves the problem. Nothing speculative.**
 
-Primary implementation agent.
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility" or "configurability" that wasn't requested.
+- No error handling for impossible scenarios.
+- If 200 lines could be 50, rewrite it.
 
-Responsible for:
+> Ask: _"Would a senior engineer say this is overcomplicated?"_ If yes, simplify.
 
-- backend implementation by default
-- repo-wide implementation work
-- focused code changes
-- document sync at the end of accepted work
-- keeping scope tight
+### 13.3 Surgical Changes
 
-#### Active Skills
+**Touch only what you must. Clean up only your own mess.**
 
-- `supabase-postgres-best-practices` — DB (Database / Veritabanı) sorguları ve index stratejisi
-- `webapp-testing` — Frontend test coverage (Gemini aktif olana kadar)
+When editing existing code:
 
-Codex must not silently expand the active work item.
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, **mention it — don't delete it**.
 
-### Gemini
+When your changes create orphans:
 
-Primarily responsible for:
+- Remove imports/variables/functions that **your** changes made unused.
+- Don't remove pre-existing dead code unless asked.
 
-- frontend direction when design is still undefined
-- frontend implementation
-- backend-aware integration checks before frontend coding
-- UI structure, component flow, and UX shaping within scope
+> **The test:** every changed line should trace directly to the request.
 
-Gemini must not invent backend fields, response shapes, endpoints, or new product scope.
+### 13.4 Goal-Driven Execution
 
-### Claude Code
+**Define success criteria. Loop until verified.**
 
-Selective review agent.
+Transform tasks into verifiable goals:
 
-Responsible for:
+| Instead of...    | Transform to...                                      |
+| ---------------- | ---------------------------------------------------- |
+| "Add validation" | "Write tests for invalid inputs, then make them pass" |
+| "Fix the bug"    | "Write a test that reproduces it, then make it pass"  |
+| "Refactor X"     | "Ensure tests pass before and after"                  |
 
-- final review on risky, milestone, or cross-cutting work
-- checking work item correctness
-- checking contract drift
-- identifying regressions and unnecessary complexity
-- suggesting minimal fixes only when necessary
+For multi-step tasks, state a brief plan upfront:
 
-Claude Code is **not** the primary implementer in this project.
+```text
+1. [Step] -> verify: [check]
+2. [Step] -> verify: [check]
+3. [Step] -> verify: [check]
+```
 
 ---
 
@@ -339,13 +347,13 @@ Whoever implements a scoped change is also responsible for the minimum necessary
 
 Rules:
 
-- If Codex implements backend changes, Codex should also add or update the relevant backend tests and run them.
-- If Gemini implements frontend changes, Gemini should also add or update the relevant frontend tests and run them when practical.
-- The implementation agent should keep tests minimal, relevant, and scoped to the current implementation slice.
-- Claude Code acts as a reviewer of implementation and test adequacy, not as the primary test author.
-- Human performs final smoke testing, approval, commit, and tag decisions.
+- Backend changes come with the relevant backend tests, run before handing off.
+- Frontend changes come with the relevant frontend tests, run when practical.
+- Keep tests minimal, relevant, and scoped to the current implementation slice.
+- A reviewer judges implementation and test adequacy; a reviewer is not the primary test author.
+- The human maintainer performs final smoke testing, approval, commit, and tag decisions.
 
-This rule exists to keep implementation ownership and test ownership aligned, reduce responsibility gaps, and prevent review agents from becoming primary implementers.
+This rule keeps implementation ownership and test ownership aligned and prevents review passes from turning into implementation passes.
 
 ---
 
@@ -353,14 +361,16 @@ This rule exists to keep implementation ownership and test ownership aligned, re
 
 When work touches the frontend/backend boundary, follow this order:
 
-1. ChatGPT defines the exact version milestone, work item, implementation slice, and boundaries.
-2. Codex implements the backend or contract-changing work first.
-3. Gemini reads the latest backend diff, docs, and contract.
-4. Gemini reports integration risks or frontend impact before frontend coding begins.
-5. Codex applies any required backend patch.
-6. Gemini implements the frontend against the finalized backend behavior.
-7. Claude Code reviews the integrated result only when the change is risky, milestone-level, or cross-cutting.
-8. Codex syncs the docs last.
+1. Define the exact version milestone, work item, implementation slice, and boundaries.
+2. Implement the backend or contract-changing work first.
+3. Read the latest backend diff, docs, and contract before writing any frontend code.
+4. Report integration risks or frontend impact before frontend coding begins.
+5. Apply any required backend patch.
+6. Implement the frontend against the finalized backend behavior.
+7. Review the integrated result when the change is risky, milestone-level, or cross-cutting.
+8. Sync the docs last.
+
+Frontend work must never invent backend fields, response shapes, endpoints, or product scope.
 
 This is the default integration path for TheEye.
 
@@ -388,7 +398,7 @@ Preferred rule:
 - planning docs are clarified before work
 - code changes are implemented
 - review is completed
-- **Codex updates the final documents last** to reflect the accepted state
+- **documents are updated last** to reflect the accepted state
 
 Do not leave backend, Docker, contract, or milestone status changes undocumented.
 
@@ -427,3 +437,129 @@ If documents conflict, follow this order:
 9. code
 
 The repository documentation wins over ad-hoc tool output.
+
+---
+
+## 20) Branch and Commit Conventions
+
+### Branch names
+
+Every branch uses a type prefix:
+
+```text
+<prefix>/<short-kebab-description>
+```
+
+Allowed prefixes: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`.
+
+```text
+feat/api-events-cursor-pagination
+fix/collector-eonet-timeout
+docs/version-plan-update
+chore/bump-go-chi
+```
+
+Do not commit directly to `master` for anything beyond trivial maintenance.
+
+### Commit messages
+
+Conventional Commits for the header, enforced locally by commitlint:
+
+```text
+<type>(<scope>): <subject>
+```
+
+Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`.
+Scopes: `api`, `collector`, `dashboard`, `infra`, `ci`, `deps`, `docs`.
+
+Non-trivial commits add a body. The body groups changes under **`Added`**, **`Changed`**, **`Removed`**, or **`Fixed`** — only these four. Use only the headings that apply, in that order. Every item starts with a dash and a single space:
+
+```text
+fix(ci): run dashboard job with pnpm from workspace root
+
+Changed
+- dashboard job runs from the workspace root and targets the app with --filter
+- pnpm version pinned through the packageManager field
+
+Removed
+- package-manager detection ladder that never matched
+
+Fixed
+- lockfile was ignored because the install step fell through to npm
+```
+
+The four headings mirror the ones used in `CHANGELOG.md`, so a milestone's changelog entry can be assembled from its commits.
+
+Rules:
+
+- header stays under ~72 characters, imperative mood, no trailing period
+- one blank line between header and body, and between each section
+- items are `- ` (dash, one space), not `*` or `-` without a space
+- do not restate the header in the body
+- trivial commits (typo, formatting, lockfile refresh) may omit the body
+
+Exempt: commits generated by Dependabot and squash-merge commits created on GitHub. Those are produced server-side and cannot pass through local hooks.
+
+---
+
+## 21) Quick Commands
+
+### Frontend
+
+```bash
+pnpm --filter dashboard dev
+pnpm --filter dashboard lint
+pnpm --filter dashboard typecheck
+pnpm --filter dashboard test
+pnpm --filter dashboard build
+```
+
+### Backend
+
+```bash
+cd services/api       && go vet ./... && go test ./... && go build ./...
+cd services/collector && go vet ./... && go test ./... && go build ./...
+gofmt -l services/api services/collector
+```
+
+### Full stack
+
+```bash
+docker compose -f ./infra/docker-compose.yml up --build
+docker compose -f ./infra/docker-compose.yml down
+```
+
+### Version
+
+```bash
+pnpm version:sync
+pnpm version:check vMAJOR.MINOR.PATCH
+```
+
+---
+
+## 22) Skills
+
+Project skills live under `.agents/skills/`, vendored from upstream sources and pinned by hash in `skills-lock.json`.
+
+- Check `.agents/skills/` before concluding that a capability is missing.
+- Treat the files there as usable skill instructions.
+- Do not edit vendored skills in place; they are replaced wholesale on update.
+
+Currently vendored:
+
+| Skill | Use for |
+| --- | --- |
+| `tdd` | test-first implementation |
+| `systematic-debugging` | root-cause work instead of symptom patching |
+| `verification-before-completion` | proving a change actually works |
+| `webapp-testing` | Playwright-driven frontend verification |
+| `next-best-practices` | Next.js App Router patterns |
+| `vercel-composition-patterns` | React component composition |
+| `typescript-advanced-types` | non-trivial typing |
+| `supabase-postgres-best-practices` | schema, index, and query strategy |
+| `improve-codebase-architecture` | structural refactors |
+| `grill-with-docs` | ADR and context capture |
+| `to-prd` | turning an idea into a scoped work item |
+| `triage` | deciding what is in scope |
+| `zoom-out` | stepping back when a change is sprawling |

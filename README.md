@@ -2,7 +2,7 @@
 
 TheEye is a **map-first global signal platform** built as a structured monorepo.
 
-It exists to collect, normalize, and present meaningful world signals through one coherent event-driven experience. The current working baseline is **v0.1.0 - Initial Working MVP**: a local Docker-backed system with a Go API, USGS earthquake ingestion, stored normalized events, and a first map/feed/detail dashboard.
+It exists to collect, normalize, and present meaningful world signals through one coherent event-driven experience. The current working baseline is **v0.2.0 - Multi-Source Ingestion**: a local Docker-backed system with a Go API, USGS earthquake and NASA EONET ingestion behind a shared source interface, stored normalized events, and a map/feed/detail dashboard.
 
 The long-term product direction is broader than a natural disaster dashboard. Natural and physical events are the first practical signal family, but TheEye can evolve toward human systems, global stability, critical infrastructure, and other high-value world signals as reliable source boundaries emerge.
 
@@ -33,14 +33,11 @@ Guiding principles:
 
 ## Current Working Model
 
-TheEye uses a controlled multi-agent workflow:
+TheEye is built with AI assistance, but the rules are **model-agnostic**. No task is reserved for a specific tool or model; contributors use whichever assistant they prefer. What is fixed is the process, not the participant.
 
-- **ChatGPT** defines scope, prepares prompts, clarifies architecture, and keeps planning aligned.
-- **Codex** is the primary implementation agent, especially for backend and repo-wide document sync.
-- **Gemini** is used mainly for frontend direction, UI structure, and backend-aware integration work.
-- **Claude Code** is used selectively for final review, risky changes, and milestone-level validation.
+Every contributor, human or agent, reads `AGENTS.md` first. It holds the engineering rules, the working principles, the contribution conventions, and the source-of-truth order. Tool-specific files such as `CLAUDE.md` only add tool-specific detail and defer to `AGENTS.md` on any conflict.
 
-Planning now follows **Version Milestones**, not Phase/Sprint documents.
+Planning follows **Version Milestones**, not Phase/Sprint documents.
 
 Current documented progress snapshot:
 
@@ -56,12 +53,12 @@ Frontend work must follow the latest stabilized backend contract.
 When a change affects the frontend/backend boundary, use this order:
 
 1. Define the target version milestone, work item, implementation slice, and constraints.
-2. Codex implements or updates the backend slice first.
-3. Gemini reads the latest backend contract and reviews frontend integration impact.
-4. Codex applies any required backend patch if Gemini finds contract or usability issues.
-5. Gemini implements the frontend against the latest backend behavior.
-6. Claude Code performs selective final review for milestone, risky, or cross-cutting changes.
-7. Codex performs final documentation sync if behavior or project state changed.
+2. Implement the backend or contract-changing slice first.
+3. Read the latest backend contract and report frontend integration impact before writing UI code.
+4. Patch the backend if the contract turns out to be incomplete or awkward for the UI.
+5. Implement the frontend against the finalized backend behavior.
+6. Review the integrated result when the change is risky, milestone-level, or cross-cutting.
+7. Sync documentation last, if behavior or project state changed.
 
 This rule exists to reduce silent contract drift.
 
@@ -78,6 +75,7 @@ TheEye/
 |  |- collector/                  # Ingestion workers/connectors
 |- infra/
 |  |- docker-compose.yml          # Local infrastructure and service orchestration
+|  |- .env.example                # Optional local overrides; defaults live in compose
 |- docs/
 |  |- VISION.md                   # Long-term product north star
 |  |- ROADMAP.md                  # High-level version milestone roadmap
@@ -86,10 +84,14 @@ TheEye/
 |  |- API.md                      # Current API contract
 |  |- DB.md                       # Current persistence baseline and planned DB direction
 |- scripts/                       # Helper scripts
+|- .agents/skills/                # Vendored agent skills, pinned in skills-lock.json
+|- .claude/                       # Claude Code permissions and slash commands
+|- .husky/                        # Git hooks: gofmt, lint-staged, commitlint
+|- .github/workflows/ci.yaml      # CI: backend matrix and dashboard checks
 |- README.md
 |- AGENTS.md
-|- GEMINI.md
 |- CLAUDE.md
+|- CONTRIBUTING.md
 |- CHANGELOG.md
 ```
 
@@ -103,7 +105,7 @@ Use for long-term product meaning, MVP boundaries, and the broader map-first glo
 
 ### `docs/VERSION_PLAN.md`
 
-Use for active version milestone planning, version rules, completed v0.1.0 scope, and planned v0.2-v0.5 direction.
+Use for active version milestone planning, version rules, completed scope, and planned direction.
 
 ### `docs/ROADMAP.md`
 
@@ -123,7 +125,15 @@ Use for current event persistence behavior, idempotency rules, and planned datab
 
 ### `AGENTS.md`
 
-Use for source-of-truth engineering rules, stack and contract rules, local dev constraints, and multi-agent coordination policy.
+The source of truth. Engineering rules, the `Event` contract, local dev constraints, working principles, branch and commit conventions, quick commands, and available skills.
+
+### `CONTRIBUTING.md`
+
+Use for the human contribution flow: what to read first, how to scope a change, and what a pull request should contain.
+
+### `CLAUDE.md`
+
+Tool-specific notes for Claude Code. Defers to `AGENTS.md` on any conflict.
 
 ---
 
@@ -149,18 +159,28 @@ Implementation must follow the documented plan, not invent a new one.
 
 The local development flow must remain stable.
 
+### First-time setup
+
+```bash
+pnpm install
+```
+
+Run this once at the repository root. It installs the workspace and activates the Git hooks in `.husky/`, which check `gofmt` on staged Go files and validate commit messages.
+
 ### Start infrastructure and local stack
 
 ```bash
 docker compose -f ./infra/docker-compose.yml up --build
 ```
 
-This is the baseline entry point for local development and should continue to support:
+This is the baseline entry point for local development and supports:
 
 - PostgreSQL / PostGIS
 - Redis
 - API service
 - collector service
+
+Compose ships with working defaults, so no `.env` file is required. Copy `infra/.env.example` to `infra/.env` only when you need to change ports, credentials, or collector tuning.
 
 ### Stop local stack
 
@@ -174,7 +194,31 @@ docker compose -f ./infra/docker-compose.yml down
 pnpm --filter dashboard dev
 ```
 
-If repo-level shortcuts exist later through `Makefile` or scripts, keep them consistent with the same local flow.
+### Verify a change
+
+```bash
+pnpm --filter dashboard lint
+pnpm --filter dashboard typecheck
+pnpm --filter dashboard test
+pnpm --filter dashboard build
+
+cd services/api       && go vet ./... && go test ./...
+cd services/collector && go vet ./... && go test ./...
+```
+
+---
+
+## Continuous Integration
+
+`.github/workflows/ci.yaml` runs on every push and pull request against `master`:
+
+| Job | What it does |
+| --- | --- |
+| `Backend (api)` | `gofmt` check, `go vet`, `go test`, `go build` for `services/api` |
+| `Backend (collector)` | the same checks for `services/collector` |
+| `Dashboard` | `pnpm install --frozen-lockfile`, lint, typecheck, test, build |
+
+The dashboard job installs from the workspace root with a frozen lockfile, so a dependency change that does not update `pnpm-lock.yaml` fails CI instead of drifting silently.
 
 ---
 
@@ -183,14 +227,14 @@ If repo-level shortcuts exist later through `Makefile` or scripts, keep them con
 A clean working loop for this repository is:
 
 1. confirm the target version milestone, work item, and implementation slice
-2. clarify constraints with ChatGPT
-3. implement backend or contract-changing work with Codex
-4. let Gemini inspect the latest backend contract for frontend impact
-5. patch backend if needed
-6. implement frontend with Gemini only after the contract is stable
-7. use Claude Code selectively for final or risky review
-8. let Codex sync docs last when state changed
-9. commit a clean, scoped unit
+2. clarify constraints and open questions before writing code
+3. implement backend or contract-changing work first
+4. check the latest backend contract for frontend impact
+5. patch the backend if needed
+6. implement the frontend only after the contract is stable
+7. review the integrated result for risky, milestone, or cross-cutting changes
+8. sync docs last when state changed
+9. commit a clean, scoped unit following the conventions in `AGENTS.md`
 10. create a tag only after a meaningful milestone
 
 ---
@@ -200,7 +244,7 @@ A clean working loop for this repository is:
 To avoid repo drift:
 
 - do not mix unrelated work in one change set
-- do not let agents silently expand the active work item
+- do not silently expand the active work item
 - do not treat tool output as a project decision until reflected in docs
 - do not let frontend invent backend fields or endpoints
 - do not break the Docker-based local workflow

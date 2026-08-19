@@ -54,38 +54,28 @@ Typical contribution flow:
 
 ---
 
-## Branching
+## Branching and Commits
 
-Use feature branches for work units.
+Branch names and commit messages follow the conventions in **`AGENTS.md` section 20**. That section is the single source of truth; the summary below is a reminder, not a second specification.
 
-Examples:
+Branches use a type prefix:
 
-- `feat/api-events-placeholder`
-- `fix/meta-endpoint-shape`
-- `docs/version-plan-update`
+```text
+feat/api-events-cursor-pagination
+fix/collector-eonet-timeout
+docs/version-plan-update
+```
 
-Do not work directly on `main` unless repository policy explicitly allows it.
+Commit headers follow Conventional Commits, and non-trivial commits add a body grouped under `Added`, `Changed`, `Removed`, or `Fixed`:
 
----
+```text
+fix(api): return structured not found response
 
-## Commit Style
+Fixed
+- unknown event ids returned an empty body instead of the documented error shape
+```
 
-Conventional Commits are preferred.
-
-Examples:
-
-- `feat(api): add placeholder event detail endpoint`
-- `fix(api): return structured not found response`
-- `docs: update version plan progress`
-
-Recommended prefixes:
-
-- `feat:`
-- `fix:`
-- `docs:`
-- `chore:`
-- `refactor:`
-- `test:`
+The commit header is checked locally by commitlint through the Git hooks in `.husky/`. Run `pnpm install` once at the repository root to activate them.
 
 ---
 
